@@ -27,11 +27,12 @@ import * as XLSX from 'xlsx';
 
 interface TeacherManagementProps {
   teachers: Teacher[];
+  userRole?: 'admin' | 'guru';
   onSaveTeacher: (teacher: Teacher) => void;
   onDeleteTeacher: (id: string) => void;
 }
 
-export default function TeacherManagement({ teachers, onSaveTeacher, onDeleteTeacher }: TeacherManagementProps) {
+export default function TeacherManagement({ teachers, userRole = 'admin', onSaveTeacher, onDeleteTeacher }: TeacherManagementProps) {
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterKepegawaian, setFilterKepegawaian] = useState<string>('ALL');
@@ -202,13 +203,15 @@ export default function TeacherManagement({ teachers, onSaveTeacher, onDeleteTea
             <FileSpreadsheet className="w-4 h-4" />
             <span>Ekspor Excel</span>
           </button>
-          <button 
-            onClick={openAddModal}
-            className="flex items-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-3.5 py-2 rounded-lg shadow-xs transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Data Guru</span>
-          </button>
+          {userRole === 'admin' && (
+            <button 
+              onClick={openAddModal}
+              className="flex items-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-3.5 py-2 rounded-lg shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Data Guru</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -325,7 +328,7 @@ export default function TeacherManagement({ teachers, onSaveTeacher, onDeleteTea
                   <th className="px-6 py-3.5">Mata Pelajaran Diampu</th>
                   <th className="px-6 py-3.5">Kontak</th>
                   <th className="px-6 py-3.5 text-center">Status</th>
-                  <th className="px-6 py-3.5 text-right no-print">Aksi</th>
+                  {userRole === 'admin' && <th className="px-6 py-3.5 text-right no-print">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
@@ -387,24 +390,26 @@ export default function TeacherManagement({ teachers, onSaveTeacher, onDeleteTea
                         {teacher.statusAktif}
                       </span>
                     </td>
-                    <td className="px-6 py-4.5 text-right no-print">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button 
-                          onClick={() => openEditModal(teacher)}
-                          className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-md border border-slate-200 transition-all cursor-pointer"
-                          title="Ubah Data"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(teacher.id, teacher.nama)}
-                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-md border border-rose-200 transition-all cursor-pointer"
-                          title="Hapus Data"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
+                    {userRole === 'admin' && (
+                      <td className="px-6 py-4.5 text-right no-print">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button 
+                            onClick={() => openEditModal(teacher)}
+                            className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-md border border-slate-200 transition-all cursor-pointer"
+                            title="Ubah Data"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(teacher.id, teacher.nama)}
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-md border border-rose-200 transition-all cursor-pointer"
+                            title="Hapus Data"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

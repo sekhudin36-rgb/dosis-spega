@@ -23,6 +23,7 @@ import {
 
 interface ClassPromotionManagementProps {
   students: Student[];
+  userRole?: 'admin' | 'guru';
   onPromoteStudents: (updatedStudents: Student[]) => void;
 }
 
@@ -34,6 +35,7 @@ interface PromotionRowState {
 
 export default function ClassPromotionManagement({
   students,
+  userRole = 'admin',
   onPromoteStudents
 }: ClassPromotionManagementProps) {
   // 1. Get list of unique active classes
@@ -436,7 +438,7 @@ export default function ClassPromotionManagement({
               </div>
 
               {/* Bulk operations panel */}
-              {filteredStudents.length > 0 && (
+              {userRole === 'admin' && filteredStudents.length > 0 && (
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs animate-fade-in">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-700">Aksi Massal:</span>
@@ -550,33 +552,48 @@ export default function ClassPromotionManagement({
                             </span>
                           </td>
                           <td className="p-4">
-                            <select
-                              value={state.action}
-                              onChange={(e: any) => updateRowAction(student.id, e.target.value)}
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border focus:outline-hidden ${
-                                state.action === 'Naik Kelas' ? 'bg-emerald-50 text-emerald-800 border-emerald-100' :
-                                state.action === 'Tinggal Kelas' ? 'bg-rose-50 text-rose-800 border-rose-100' :
-                                state.action === 'Lulus' ? 'bg-indigo-50 text-indigo-800 border-indigo-100' :
-                                'bg-slate-100 text-slate-700 border-slate-200'
-                              }`}
-                            >
-                              <option value="Naik Kelas">Naik Kelas</option>
-                              <option value="Tinggal Kelas">Tinggal Kelas</option>
-                              <option value="Lulus">Lulus</option>
-                              <option value="Pindah/Keluar">Pindah/Keluar</option>
-                            </select>
+                            {userRole === 'admin' ? (
+                              <select
+                                value={state.action}
+                                onChange={(e: any) => updateRowAction(student.id, e.target.value)}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border focus:outline-hidden ${
+                                  state.action === 'Naik Kelas' ? 'bg-emerald-50 text-emerald-800 border-emerald-100' :
+                                  state.action === 'Tinggal Kelas' ? 'bg-rose-50 text-rose-800 border-rose-100' :
+                                  state.action === 'Lulus' ? 'bg-indigo-50 text-indigo-800 border-indigo-100' :
+                                  'bg-slate-100 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                <option value="Naik Kelas">Naik Kelas</option>
+                                <option value="Tinggal Kelas">Tinggal Kelas</option>
+                                <option value="Lulus">Lulus</option>
+                                <option value="Pindah/Keluar">Pindah/Keluar</option>
+                              </select>
+                            ) : (
+                              <span className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border ${
+                                  state.action === 'Naik Kelas' ? 'bg-emerald-50 text-emerald-800 border-emerald-100' :
+                                  state.action === 'Tinggal Kelas' ? 'bg-rose-50 text-rose-800 border-rose-100' :
+                                  state.action === 'Lulus' ? 'bg-indigo-50 text-indigo-800 border-indigo-100' :
+                                  'bg-slate-100 text-slate-700 border-slate-200'
+                                }`}>
+                                {state.action}
+                              </span>
+                            )}
                           </td>
                           <td className="p-4">
                             {state.action === 'Naik Kelas' ? (
                               <div className="flex items-center gap-1.5">
                                 <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                                <input
-                                  type="text"
-                                  value={state.targetClass}
-                                  onChange={(e) => updateRowTargetClass(student.id, e.target.value)}
-                                  placeholder="Kelas baru"
-                                  className="w-16 px-2 py-1 border border-slate-200 rounded-md text-center font-bold text-indigo-700 bg-indigo-50/20"
-                                />
+                                {userRole === 'admin' ? (
+                                  <input
+                                    type="text"
+                                    value={state.targetClass}
+                                    onChange={(e) => updateRowTargetClass(student.id, e.target.value)}
+                                    placeholder="Kelas baru"
+                                    className="w-16 px-2 py-1 border border-slate-200 rounded-md text-center font-bold text-indigo-700 bg-indigo-50/20"
+                                  />
+                                ) : (
+                                  <span className="w-16 px-2 py-1 text-center font-bold text-indigo-700">{state.targetClass}</span>
+                                )}
                               </div>
                             ) : state.action === 'Tinggal Kelas' ? (
                               <span className="text-[10px] text-rose-600 font-semibold italic">Tetap di kelas {selectedClass}</span>
@@ -619,14 +636,16 @@ export default function ClassPromotionManagement({
                 </div>
 
                 {/* Submit button */}
-                <button
-                  type="button"
-                  onClick={handleProcessPromotion}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer hover:shadow-md"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Proses Kenaikan Kelas ({filteredStudents.length} Siswa)</span>
-                </button>
+                {userRole === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={handleProcessPromotion}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer hover:shadow-md"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Proses Kenaikan Kelas ({filteredStudents.length} Siswa)</span>
+                  </button>
+                )}
 
               </div>
             )}

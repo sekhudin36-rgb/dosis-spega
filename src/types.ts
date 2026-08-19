@@ -224,5 +224,14 @@ export interface SchoolSettings {
   kepalaSekolah: string;
   nipKepalaSekolah: string;
   tahunAjaranAktif: string;
+  temaAplikasi?: 'gelap' | 'terang' | 'biru' | 'indigo' | 'hijau';
 }
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  password?: string; // Stored securely in real apps, plain here for simplicity per request
+  role: 'admin' | 'guru';
+}
+
 

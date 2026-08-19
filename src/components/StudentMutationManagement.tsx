@@ -29,6 +29,7 @@ import {
 
 interface StudentMutationManagementProps {
   students: Student[];
+  userRole?: 'admin' | 'guru';
   onSaveStudent: (student: Student) => void;
   onDeleteStudent: (id: string) => void;
   onViewStudent?: (student: Student) => void;
@@ -37,6 +38,7 @@ interface StudentMutationManagementProps {
 
 export default function StudentMutationManagement({
   students,
+  userRole = 'admin',
   onSaveStudent,
   onDeleteStudent,
   onViewStudent,
@@ -308,13 +310,15 @@ export default function StudentMutationManagement({
                     />
                   </div>
 
-                  <button
-                    onClick={() => setShowAddMasukForm(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Input Mutasi Masuk</span>
-                  </button>
+                  {userRole === 'admin' && (
+                    <button
+                      onClick={() => setShowAddMasukForm(true)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Input Mutasi Masuk</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -376,33 +380,37 @@ export default function StudentMutationManagement({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => onEditStudent && onEditStudent(student)}
-                                className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
-                                title="Edit Biodata"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
                                 onClick={() => exportStudentMasterBookPDF(student)}
                                 className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
                                 title="Cetak Buku Induk (PDF)"
                               >
                                 <Printer className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (confirm(`Apakah Anda yakin ingin menghapus data mutasi masuk siswa ${student.namaLengkap}?`)) {
-                                    onDeleteStudent(student.id);
-                                    triggerAlert(`Siswa ${student.namaLengkap} berhasil dihapus.`);
-                                  }
-                                }}
-                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                                title="Hapus"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {userRole === 'admin' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => onEditStudent && onEditStudent(student)}
+                                    className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
+                                    title="Edit Biodata"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm(`Apakah Anda yakin ingin menghapus data mutasi masuk siswa ${student.namaLengkap}?`)) {
+                                        onDeleteStudent(student.id);
+                                        triggerAlert(`Siswa ${student.namaLengkap} berhasil dihapus.`);
+                                      }
+                                    }}
+                                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                    title="Hapus"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -702,42 +710,44 @@ export default function StudentMutationManagement({
             <div className="space-y-6">
               
               {/* Box to prompt outgoing transfer */}
-              <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <HelpCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-amber-900">Bagaimana cara memproses Mutasi Keluar?</h4>
-                    <p className="text-[11px] text-amber-800/80 mt-0.5 leading-relaxed">
-                      Pilih salah satu siswa aktif pada dropdown pencarian di bawah ini untuk mengisikan sekolah tujuan, tanggal keluar, dan surat keputusan pindah tugas.
-                    </p>
+              {userRole === 'admin' && (
+                <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <HelpCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-900">Bagaimana cara memproses Mutasi Keluar?</h4>
+                      <p className="text-[11px] text-amber-800/80 mt-0.5 leading-relaxed">
+                        Pilih salah satu siswa aktif pada dropdown pencarian di bawah ini untuk mengisikan sekolah tujuan, tanggal keluar, dan surat keputusan pindah tugas.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-600">Pilih Siswa Aktif:</span>
+                    <select
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        if (!id) return;
+                        const found = students.find(s => s.id === id);
+                        if (found) {
+                          setSelectedStudentForKeluar(found);
+                          setShowProcessKeluarForm(true);
+                        }
+                        e.target.value = ''; // Reset select
+                      }}
+                      className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:border-amber-500"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>-- Pilih Siswa Untuk Pindah --</option>
+                      {activeStudents.map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.namaLengkap} (NIS: {s.nis} - Kelas {s.kelasSaatIni})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-
-                <div className="shrink-0 flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-600">Pilih Siswa Aktif:</span>
-                  <select
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      if (!id) return;
-                      const found = students.find(s => s.id === id);
-                      if (found) {
-                        setSelectedStudentForKeluar(found);
-                        setShowProcessKeluarForm(true);
-                      }
-                      e.target.value = ''; // Reset select
-                    }}
-                    className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:border-amber-500"
-                    defaultValue=""
-                  >
-                    <option value="" disabled>-- Pilih Siswa Untuk Pindah --</option>
-                    {activeStudents.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.namaLengkap} (NIS: {s.nis} - Kelas {s.kelasSaatIni})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              )}
 
               {/* History list of Mutated out students */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
@@ -821,54 +831,58 @@ export default function StudentMutationManagement({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => onEditStudent && onEditStudent(student)}
-                                  className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
-                                  title="Edit Biodata"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
                                   onClick={() => exportStudentMasterBookPDF(student)}
                                   className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
                                   title="Cetak Buku Induk (PDF)"
                                 >
                                   <Printer className="w-3.5 h-3.5" />
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (confirm(`Apakah Anda yakin ingin menghapus data siswa ${student.namaLengkap}?`)) {
-                                      onDeleteStudent(student.id);
-                                      triggerAlert(`Siswa ${student.namaLengkap} berhasil dihapus.`);
-                                    }
-                                  }}
-                                  className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                                  title="Hapus"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (confirm(`Apakah Anda yakin ingin membatalkan status mutasi keluar untuk ${student.namaLengkap} dan mengaktifkannya kembali?`)) {
-                                      const reverted: Student = {
-                                        ...student,
-                                        statusSiswa: 'Aktif',
-                                        sekolahTujuan: undefined,
-                                        tanggalMutasiKeluar: undefined,
-                                        noSuratMutasiKeluar: undefined,
-                                        alasanMutasi: undefined
-                                      };
-                                      onSaveStudent(reverted);
-                                      triggerAlert(`Siswa ${student.namaLengkap} berhasil diaktifkan kembali.`);
-                                    }
-                                  }}
-                                  className="p-1.5 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer"
-                                  title="Aktifkan Kembali"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                </button>
+                                {userRole === 'admin' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => onEditStudent && onEditStudent(student)}
+                                      className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
+                                      title="Edit Biodata"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (confirm(`Apakah Anda yakin ingin menghapus data siswa ${student.namaLengkap}?`)) {
+                                          onDeleteStudent(student.id);
+                                          triggerAlert(`Siswa ${student.namaLengkap} berhasil dihapus.`);
+                                        }
+                                      }}
+                                      className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                      title="Hapus"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (confirm(`Apakah Anda yakin ingin membatalkan status mutasi keluar untuk ${student.namaLengkap} dan mengaktifkannya kembali?`)) {
+                                          const reverted: Student = {
+                                            ...student,
+                                            statusSiswa: 'Aktif',
+                                            sekolahTujuan: undefined,
+                                            tanggalMutasiKeluar: undefined,
+                                            noSuratMutasiKeluar: undefined,
+                                            alasanMutasi: undefined
+                                          };
+                                          onSaveStudent(reverted);
+                                          triggerAlert(`Siswa ${student.namaLengkap} berhasil diaktifkan kembali.`);
+                                        }
+                                      }}
+                                      className="p-1.5 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer"
+                                      title="Aktifkan Kembali"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </tr>

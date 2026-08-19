@@ -27,10 +27,11 @@ interface MainDashboardProps {
   teachers: Teacher[];
   staffList: Staff[];
   settings: SchoolSettings;
+  userRole?: 'admin' | 'guru';
   onNavigate: (tab: 'siswa' | 'guru' | 'staff' | 'promotion' | 'mutasi' | 'alumni' | 'settings') => void;
 }
 
-export default function MainDashboard({ students, teachers, staffList, settings, onNavigate }: MainDashboardProps) {
+export default function MainDashboard({ students, teachers, staffList, settings, userRole = 'admin', onNavigate }: MainDashboardProps) {
   // States
   const [hoveredBar, setHoveredBar] = useState<string | null>(null);
   const [hoveredScoreBar, setHoveredScoreBar] = useState<string | null>(null);
@@ -143,13 +144,15 @@ export default function MainDashboard({ students, teachers, staffList, settings,
               <span>Kelola Siswa</span>
               <ArrowUpRight className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => onNavigate('settings')}
-              className="px-4.5 py-2.5 bg-white/10 text-white font-bold rounded-2xl text-xs hover:bg-white/15 transition-all border border-white/10 flex items-center gap-1.5 cursor-pointer"
-            >
-              <Settings className="w-4 h-4 text-slate-300" />
-              <span>Pengaturan</span>
-            </button>
+            {userRole === 'admin' && (
+              <button
+                onClick={() => onNavigate('settings')}
+                className="px-4.5 py-2.5 bg-white/10 text-white font-bold rounded-2xl text-xs hover:bg-white/15 transition-all border border-white/10 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Settings className="w-4 h-4 text-slate-300" />
+                <span>Pengaturan</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -477,15 +480,17 @@ export default function MainDashboard({ students, teachers, staffList, settings,
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-end">
-            <button 
-              onClick={() => onNavigate('settings')}
-              className="text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-150 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Edit Profil Lembaga</span>
-            </button>
-          </div>
+          {userRole === 'admin' && (
+            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-end">
+              <button 
+                onClick={() => onNavigate('settings')}
+                className="text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-150 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Edit Profil Lembaga</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Recent Added Students Log (5 Cols) */}
@@ -555,7 +560,7 @@ export default function MainDashboard({ students, teachers, staffList, settings,
           
           <button 
             onClick={() => onNavigate('siswa')}
-            className="p-4 bg-white hover:bg-purple-50/20 border border-slate-100 hover:border-purple-200 rounded-2xl shadow-3xs hover:shadow-xs transition-all text-left flex flex-col justify-between h-28 group cursor-pointer"
+            className="p-4 bg-white hover:bg-purple-50/50 border border-slate-100 hover:border-purple-200 rounded-2xl shadow-3xs hover:shadow-md transition-all text-left flex flex-col justify-between h-28 group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition-transform border border-purple-100">
               <GraduationCap className="w-4.5 h-4.5" />
@@ -568,7 +573,7 @@ export default function MainDashboard({ students, teachers, staffList, settings,
 
           <button 
             onClick={() => onNavigate('guru')}
-            className="p-4 bg-white hover:bg-blue-50/20 border border-slate-100 hover:border-blue-200 rounded-2xl shadow-3xs hover:shadow-xs transition-all text-left flex flex-col justify-between h-28 group cursor-pointer"
+            className="p-4 bg-white hover:bg-blue-50/50 border border-slate-100 hover:border-blue-200 rounded-2xl shadow-3xs hover:shadow-md transition-all text-left flex flex-col justify-between h-28 group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform border border-blue-100">
               <Users className="w-4.5 h-4.5" />
@@ -581,7 +586,7 @@ export default function MainDashboard({ students, teachers, staffList, settings,
 
           <button 
             onClick={() => onNavigate('promotion')}
-            className="p-4 bg-white hover:bg-emerald-50/20 border border-slate-100 hover:border-emerald-200 rounded-2xl shadow-3xs hover:shadow-xs transition-all text-left flex flex-col justify-between h-28 group cursor-pointer"
+            className="p-4 bg-white hover:bg-emerald-50/50 border border-slate-100 hover:border-emerald-200 rounded-2xl shadow-3xs hover:shadow-md transition-all text-left flex flex-col justify-between h-28 group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform border border-emerald-100">
               <TrendingUp className="w-4.5 h-4.5" />
@@ -594,7 +599,7 @@ export default function MainDashboard({ students, teachers, staffList, settings,
 
           <button 
             onClick={() => onNavigate('mutasi')}
-            className="p-4 bg-white hover:bg-amber-50/20 border border-slate-100 hover:border-amber-200 rounded-2xl shadow-3xs hover:shadow-xs transition-all text-left flex flex-col justify-between h-28 group cursor-pointer"
+            className="p-4 bg-white hover:bg-amber-50/50 border border-slate-100 hover:border-amber-200 rounded-2xl shadow-3xs hover:shadow-md transition-all text-left flex flex-col justify-between h-28 group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform border border-amber-100">
               <ArrowLeftRight className="w-4.5 h-4.5" />
@@ -605,18 +610,20 @@ export default function MainDashboard({ students, teachers, staffList, settings,
             </div>
           </button>
 
-          <button 
-            onClick={() => onNavigate('settings')}
-            className="p-4 bg-white hover:bg-rose-50/20 border border-slate-100 hover:border-rose-200 rounded-2xl shadow-3xs hover:shadow-xs transition-all text-left flex flex-col justify-between h-28 group cursor-pointer col-span-2 md:col-span-1"
-          >
-            <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform border border-rose-100">
-              <Settings className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <h5 className="font-bold text-slate-800 text-xs">Konfigurasi</h5>
-              <p className="text-[10px] text-slate-400 mt-0.5">Tahun ajaran & profil</p>
-            </div>
-          </button>
+          {userRole === 'admin' && (
+            <button 
+              onClick={() => onNavigate('settings')}
+              className="p-4 bg-white hover:bg-rose-50/50 border border-slate-100 hover:border-rose-200 rounded-2xl shadow-3xs hover:shadow-md transition-all text-left flex flex-col justify-between h-28 group cursor-pointer col-span-2 md:col-span-1"
+            >
+              <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform border border-rose-100">
+                <Settings className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <h5 className="font-bold text-slate-800 text-xs">Konfigurasi</h5>
+                <p className="text-[10px] text-slate-400 mt-0.5">Tahun ajaran & profil</p>
+              </div>
+            </button>
+          )}
 
         </div>
       </div>

@@ -27,6 +27,7 @@ import {
 
 interface AlumniManagementProps {
   students: Student[];
+  userRole?: 'admin' | 'guru';
   onSaveStudent: (student: Student) => void;
   onDeleteStudent?: (id: string) => void;
   onViewStudent?: (student: Student) => void;
@@ -35,6 +36,7 @@ interface AlumniManagementProps {
 
 export default function AlumniManagement({
   students,
+  userRole = 'admin',
   onSaveStudent,
   onDeleteStudent,
   onViewStudent,
@@ -428,40 +430,44 @@ export default function AlumniManagement({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => onEditStudent && onEditStudent(student)}
-                                className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
-                                title="Edit Biodata"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
                                 onClick={() => exportStudentMasterBookPDF(student)}
                                 className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
                                 title="Cetak Buku Induk (PDF)"
                               >
                                 <Printer className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEdit(student)}
-                                className="p-1.5 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer"
-                                title="Lacak Kelanjutan Sekolah"
-                              >
-                                <Award className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (confirm(`Apakah Anda yakin ingin menghapus data alumni ${student.namaLengkap}?`)) {
-                                    onDeleteStudent && onDeleteStudent(student.id);
-                                  }
-                                }}
-                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                                title="Hapus"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {userRole === 'admin' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => onEditStudent && onEditStudent(student)}
+                                    className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
+                                    title="Edit Biodata"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEdit(student)}
+                                    className="p-1.5 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer"
+                                    title="Lacak Kelanjutan Sekolah"
+                                  >
+                                    <Award className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm(`Apakah Anda yakin ingin menghapus data alumni ${student.namaLengkap}?`)) {
+                                        onDeleteStudent && onDeleteStudent(student.id);
+                                      }
+                                    }}
+                                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                    title="Hapus"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>

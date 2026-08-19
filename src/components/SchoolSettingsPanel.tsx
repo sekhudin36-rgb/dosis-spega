@@ -368,6 +368,34 @@ export default function SchoolSettingsPanel({
               </div>
             </div>
 
+            {/* Section 5: Tema Aplikasi */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-slate-400" />
+                V. Personalisasi Tema
+              </h3>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Pilih Tema Panel Navigasi</label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {(['gelap', 'terang', 'biru', 'indigo', 'hijau'] as const).map(tema => (
+                    <button
+                      key={tema}
+                      type="button"
+                      onClick={() => handleChange('temaAplikasi', tema)}
+                      className={`py-2 px-3 rounded-lg text-[11px] font-bold capitalize transition-all cursor-pointer border ${
+                        formSettings.temaAplikasi === tema 
+                          ? 'bg-slate-800 text-white border-slate-800 shadow-md' 
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {tema}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Submit Button */}
             <div className="flex justify-end pt-2">
               <button 

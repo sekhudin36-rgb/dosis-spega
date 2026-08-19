@@ -31,6 +31,7 @@ import { exportStudentMasterBookPDF, exportStudentReportPDF } from '../utils/pdf
 
 interface StudentDetailProps {
   student: Student;
+  userRole?: 'admin' | 'guru';
   onBack: () => void;
   onEdit: () => void;
   onUpdateStudent: (updated: Student) => void;
@@ -39,6 +40,7 @@ interface StudentDetailProps {
 
 export default function StudentDetail({
   student,
+  userRole = 'admin',
   onBack,
   onEdit,
   onUpdateStudent,
@@ -49,6 +51,7 @@ export default function StudentDetail({
 
   // Handle Photo upload / drag-and-drop
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (userRole !== 'admin') return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -96,13 +99,15 @@ export default function StudentDetail({
           </button>
 
           {/* Edit Student profile */}
-          <button 
-            onClick={onEdit}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-          >
-            <Edit className="w-4 h-4" />
-            <span>Ubah Profil</span>
-          </button>
+          {userRole === 'admin' && (
+            <button 
+              onClick={onEdit}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Ubah Profil</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -122,16 +127,18 @@ export default function StudentDetail({
               />
               
               {/* Overlay upload camera icon */}
-              <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer duration-300">
-                <Camera className="w-6 h-6 mb-1" />
-                <span className="text-[10px] font-semibold">Ganti Foto</span>
-                <input 
-                  type="file" 
-                  accept="image/png, image/jpeg, image/jpg" 
-                  onChange={handlePhotoChange} 
-                  className="hidden" 
-                />
-              </label>
+              {userRole === 'admin' && (
+                <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer duration-300">
+                  <Camera className="w-6 h-6 mb-1" />
+                  <span className="text-[10px] font-semibold">Ganti Foto</span>
+                  <input 
+                    type="file" 
+                    accept="image/png, image/jpeg, image/jpg" 
+                    onChange={handlePhotoChange} 
+                    className="hidden" 
+                  />
+                </label>
+              )}
             </div>
 
             <h3 className="text-lg font-bold text-slate-800 mt-4 leading-tight">{student.namaLengkap}</h3>
@@ -587,13 +594,15 @@ export default function StudentDetail({
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <h4 className="font-bold text-slate-800 text-sm">Transkrip Nilai Semester (1-6)</h4>
                   <div className="flex gap-2">
-                    <button 
-                      onClick={() => onOpenGradeEditor("1")}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 transition-all cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Kelola Semua Nilai</span>
-                    </button>
+                    {userRole === 'admin' && (
+                      <button 
+                        onClick={() => onOpenGradeEditor("1")}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Kelola Semua Nilai</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -638,13 +647,15 @@ export default function StudentDetail({
                               <span className="hidden sm:inline">Cetak Rapor</span>
                             </button>
                           )}
-                          <button 
-                            onClick={() => onOpenGradeEditor(semKey)}
-                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
-                            title="Edit Nilai"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
+                          {userRole === 'admin' && (
+                            <button 
+                              onClick={() => onOpenGradeEditor(semKey)}
+                              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+                              title="Edit Nilai"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <div onClick={() => toggleSemester(semKey)} className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer">
                             {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                           </div>
@@ -764,15 +775,19 @@ export default function StudentDetail({
                             <div className="flex flex-col items-center justify-center py-8 text-center text-slate-400 bg-slate-50/30 rounded-lg">
                               <AlertCircle className="w-8 h-8 text-slate-300 mb-1.5" />
                               <p className="font-semibold text-xs text-slate-500">Nilai Semester Belum Diinput</p>
-                              <p className="text-[10px] text-slate-400 max-w-xs mt-0.5 mb-3.5">
-                                Masukkan riwayat akademik semester ini untuk dapat mencetak lembar rapor PDF secara otomatis.
-                              </p>
-                              <button 
-                                onClick={() => onOpenGradeEditor(semKey)}
-                                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
-                              >
-                                Input Nilai Sekarang
-                              </button>
+                              {userRole === 'admin' && (
+                                <>
+                                  <p className="text-[10px] text-slate-400 max-w-xs mt-0.5 mb-3.5">
+                                    Masukkan riwayat akademik semester ini untuk dapat mencetak lembar rapor PDF secara otomatis.
+                                  </p>
+                                  <button 
+                                    onClick={() => onOpenGradeEditor(semKey)}
+                                    className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                  >
+                                    Input Nilai Sekarang
+                                  </button>
+                                </>
+                              )}
                             </div>
                           )}
                         </div>

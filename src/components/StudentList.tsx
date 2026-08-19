@@ -43,6 +43,7 @@ import {
 
 interface StudentListProps {
   students: Student[];
+  userRole?: 'admin' | 'guru';
   onSelectStudent: (student: Student) => void;
   onAddStudent: () => void;
   onDeleteStudent: (id: string) => void;
@@ -53,6 +54,7 @@ interface StudentListProps {
 
 export default function StudentList({
   students,
+  userRole = 'admin',
   onSelectStudent,
   onAddStudent,
   onDeleteStudent,
@@ -603,31 +605,37 @@ export default function StudentList({
           </button>
 
           {/* Import Excel */}
-          <button 
-            onClick={triggerImportClick}
-            title="Impor Data Siswa secara Massal dari Excel"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-all border border-emerald-200"
-          >
-            <Upload className="w-4 h-4" />
-            <span>Impor Excel</span>
-          </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleExcelImport} 
-            accept=".xlsx, .xls" 
-            className="hidden" 
-          />
+          {userRole === 'admin' && (
+            <>
+              <button 
+                onClick={triggerImportClick}
+                title="Impor Data Siswa secara Massal dari Excel"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-all border border-emerald-200"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Impor Excel</span>
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleExcelImport} 
+                accept=".xlsx, .xls" 
+                className="hidden" 
+              />
+            </>
+          )}
 
           {/* Import Edosis */}
-          <button 
-            onClick={() => setIsEdosisModalOpen(true)}
-            title="Fitur Khusus: Impor Data Siswa dari Aplikasi EDOSIS"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition-all border border-indigo-200 cursor-pointer"
-          >
-            <FileText className="w-4 h-4" />
-            <span>Impor EDOSIS</span>
-          </button>
+          {userRole === 'admin' && (
+            <button 
+              onClick={() => setIsEdosisModalOpen(true)}
+              title="Fitur Khusus: Impor Data Siswa dari Aplikasi EDOSIS"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition-all border border-indigo-200 cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Impor EDOSIS</span>
+            </button>
+          )}
 
           {/* Export Excel */}
           <button 
@@ -640,42 +648,48 @@ export default function StudentList({
           </button>
 
           {/* Impor/Ekspor Nilai */}
-          <button 
-            onClick={() => setIsGradesModalOpen(true)}
-            title="Kelola Impor dan Ekspor Nilai/Rapor Siswa secara Massal"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl text-xs font-semibold transition-all border border-purple-200 cursor-pointer"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Impor/Ekspor Nilai</span>
-          </button>
+          {userRole === 'admin' && (
+            <button 
+              onClick={() => setIsGradesModalOpen(true)}
+              title="Kelola Impor dan Ekspor Nilai/Rapor Siswa secara Massal"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl text-xs font-semibold transition-all border border-purple-200 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Impor/Ekspor Nilai</span>
+            </button>
+          )}
 
           {/* Unggah Rapor Kelas */}
-          <button 
-            onClick={() => {
-              setIsBulkRaporModalOpen(true);
-              const validClasses = classes.filter(c => c !== 'Semua');
-              setBulkClass(validClasses[0] || '');
-              setBulkSemester('1');
-            }}
-            title="Unggah Rapor Kelas Sekaligus"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-          >
-            <Upload className="w-4 h-4" />
-            <span>Unggah Rapor Kelas</span>
-          </button>
+          {userRole === 'admin' && (
+            <button 
+              onClick={() => {
+                setIsBulkRaporModalOpen(true);
+                const validClasses = classes.filter(c => c !== 'Semua');
+                setBulkClass(validClasses[0] || '');
+                setBulkSemester('1');
+              }}
+              title="Unggah Rapor Kelas Sekaligus"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Unggah Rapor Kelas</span>
+            </button>
+          )}
 
           {/* Unggah Foto Massal */}
-          <button 
-            onClick={() => {
-              setIsBulkPhotoModalOpen(true);
-              setBulkPhotoUploads([]);
-            }}
-            title="Unggah Foto Banyak Siswa Sekaligus"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-          >
-            <Camera className="w-4 h-4" />
-            <span>Unggah Foto Massal</span>
-          </button>
+          {userRole === 'admin' && (
+            <button 
+              onClick={() => {
+                setIsBulkPhotoModalOpen(true);
+                setBulkPhotoUploads([]);
+              }}
+              title="Unggah Foto Banyak Siswa Sekaligus"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Unggah Foto Massal</span>
+            </button>
+          )}
 
           {/* Cetak Kartu Siswa */}
           <button 
@@ -694,13 +708,15 @@ export default function StudentList({
           </button>
 
           {/* Tambah Siswa */}
-          <button 
-            onClick={onAddStudent}
-            className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer"
-          >
-            <Plus className="w-4.5 h-4.5" />
-            <span>Tambah Siswa</span>
-          </button>
+          {userRole === 'admin' && (
+            <button 
+              onClick={onAddStudent}
+              className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer"
+            >
+              <Plus className="w-4.5 h-4.5" />
+              <span>Tambah Siswa</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -900,70 +916,74 @@ export default function StudentList({
                             <span>Buka Profil Detail</span>
                           </button>
                           
-                          <button
-                            onClick={() => {
-                              setSelectedStudentForMutasi(student);
-                              setMutasiData({
-                                sekolahTujuan: student.sekolahTujuan || '',
-                                tanggalMutasiKeluar: student.tanggalMutasiKeluar || new Date().toISOString().split('T')[0],
-                                noSuratMutasiKeluar: student.noSuratMutasiKeluar || '',
-                                alasanMutasi: student.alasanMutasi || ''
-                              });
-                              setOpenDropdownId(null);
-                            }}
-                            className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                          >
-                            <ArrowLeftRight className="w-4 h-4 text-blue-500" />
-                            <span>Tambah Mutasi</span>
-                          </button>
+                          {userRole === 'admin' && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setSelectedStudentForMutasi(student);
+                                  setMutasiData({
+                                    sekolahTujuan: student.sekolahTujuan || '',
+                                    tanggalMutasiKeluar: student.tanggalMutasiKeluar || new Date().toISOString().split('T')[0],
+                                    noSuratMutasiKeluar: student.noSuratMutasiKeluar || '',
+                                    alasanMutasi: student.alasanMutasi || ''
+                                  });
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                              >
+                                <ArrowLeftRight className="w-4 h-4 text-blue-500" />
+                                <span>Tambah Mutasi</span>
+                              </button>
 
-                          <button
-                            onClick={() => {
-                              setSelectedStudentForPrestasi(student);
-                              setOpenDropdownId(null);
-                            }}
-                            className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                          >
-                            <Award className="w-4 h-4 text-emerald-500" />
-                            <span>Tambah Prestasi</span>
-                          </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedStudentForPrestasi(student);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                              >
+                                <Award className="w-4 h-4 text-emerald-500" />
+                                <span>Tambah Prestasi</span>
+                              </button>
 
-                          <button
-                            onClick={() => {
-                              setSelectedStudentForRapor(student);
-                              setOpenDropdownId(null);
-                            }}
-                            className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                          >
-                            <FileText className="w-4 h-4 text-pink-500" />
-                            <span>Unggah/Buka Rapor</span>
-                          </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedStudentForRapor(student);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                              >
+                                <FileText className="w-4 h-4 text-pink-500" />
+                                <span>Unggah/Buka Rapor</span>
+                              </button>
 
-                          <button
-                            onClick={() => {
-                              setSelectedStudentForPhoto(student);
-                              setOpenDropdownId(null);
-                            }}
-                            className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                          >
-                            <Camera className="w-4 h-4 text-amber-500" />
-                            <span>Unggah/Kelola Foto</span>
-                          </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedStudentForPhoto(student);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                              >
+                                <Camera className="w-4 h-4 text-amber-500" />
+                                <span>Unggah/Kelola Foto</span>
+                              </button>
 
-                          <div className="border-t border-slate-100 my-1" />
+                              <div className="border-t border-slate-100 my-1" />
 
-                          <button
-                            onClick={() => {
-                              setOpenDropdownId(null);
-                              if (confirm(`Apakah Anda yakin ingin menghapus data buku induk ${student.namaLengkap}?`)) {
-                                onDeleteStudent(student.id);
-                              }
-                            }}
-                            className="w-full px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            <span>Hapus Data Siswa</span>
-                          </button>
+                              <button
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  if (confirm(`Apakah Anda yakin ingin menghapus data buku induk ${student.namaLengkap}?`)) {
+                                    onDeleteStudent(student.id);
+                                  }
+                                }}
+                                className="w-full px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span>Hapus Data Siswa</span>
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1062,85 +1082,92 @@ export default function StudentList({
                               <span>Buka Profil Detail</span>
                             </button>
                             
-                            <button
-                              onClick={() => {
-                                setSelectedStudentForMutasi(student);
-                                setMutasiData({
-                                  sekolahTujuan: student.sekolahTujuan || '',
-                                  tanggalMutasiKeluar: student.tanggalMutasiKeluar || new Date().toISOString().split('T')[0],
-                                  noSuratMutasiKeluar: student.noSuratMutasiKeluar || '',
-                                  alasanMutasi: student.alasanMutasi || ''
-                                });
-                                setOpenDropdownId(null);
-                              }}
-                              className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                            >
-                              <ArrowLeftRight className="w-4 h-4 text-blue-500" />
-                              <span>Tambah Mutasi</span>
-                            </button>
+                            {userRole === 'admin' && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setSelectedStudentForMutasi(student);
+                                    setMutasiData({
+                                      sekolahTujuan: student.sekolahTujuan || '',
+                                      tanggalMutasiKeluar: student.tanggalMutasiKeluar || new Date().toISOString().split('T')[0],
+                                      noSuratMutasiKeluar: student.noSuratMutasiKeluar || '',
+                                      alasanMutasi: student.alasanMutasi || ''
+                                    });
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                >
+                                  <ArrowLeftRight className="w-4 h-4 text-blue-500" />
+                                  <span>Tambah Mutasi</span>
+                                </button>
 
-                            <button
-                              onClick={() => {
-                                setSelectedStudentForPrestasi(student);
-                                setOpenDropdownId(null);
-                              }}
-                              className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                            >
-                              <Award className="w-4 h-4 text-emerald-500" />
-                              <span>Tambah Prestasi</span>
-                            </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedStudentForPrestasi(student);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                >
+                                  <Award className="w-4 h-4 text-emerald-500" />
+                                  <span>Tambah Prestasi</span>
+                                </button>
 
-                            <button
-                              onClick={() => {
-                                setSelectedStudentForRapor(student);
-                                setOpenDropdownId(null);
-                              }}
-                              className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                            >
-                              <FileText className="w-4 h-4 text-pink-500" />
-                              <span>Unggah/Buka Rapor</span>
-                            </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedStudentForRapor(student);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                >
+                                  <FileText className="w-4 h-4 text-pink-500" />
+                                  <span>Unggah/Buka Rapor</span>
+                                </button>
 
-                            <button
-                              onClick={() => {
-                                setSelectedStudentForPhoto(student);
-                                setOpenDropdownId(null);
-                              }}
-                              className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                            >
-                              <Camera className="w-4 h-4 text-amber-500" />
-                              <span>Unggah/Kelola Foto</span>
-                            </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedStudentForPhoto(student);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                              >
+                                <Camera className="w-4 h-4 text-amber-500" />
+                                <span>Unggah/Kelola Foto</span>
+                              </button>
+                            </>
+                          )}
 
-                            <button
-                              onClick={() => {
-                                setCardPrinterStudents([student]);
-                                setCardSelectedIds([student.id]);
-                                setCardFilterClass('Semua');
-                                setCardSearchQuery('');
-                                setIsCardPrinterOpen(true);
-                                setOpenDropdownId(null);
-                              }}
-                              className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                            >
-                              <CreditCard className="w-4 h-4 text-indigo-500" />
-                              <span>Cetak Kartu Siswa</span>
-                            </button>
+                          <button
+                            onClick={() => {
+                              setCardPrinterStudents([student]);
+                              setCardSelectedIds([student.id]);
+                              setCardFilterClass('Semua');
+                              setCardSearchQuery('');
+                              setIsCardPrinterOpen(true);
+                              setOpenDropdownId(null);
+                            }}
+                            className="w-full px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                          >
+                            <CreditCard className="w-4 h-4 text-indigo-500" />
+                            <span>Cetak Kartu Siswa</span>
+                          </button>
 
-                            <div className="border-t border-slate-100 my-1" />
-
-                            <button
-                              onClick={() => {
-                                setOpenDropdownId(null);
-                                if (confirm(`Apakah Anda yakin ingin menghapus data buku induk ${student.namaLengkap}?`)) {
-                                  onDeleteStudent(student.id);
-                                }
-                              }}
-                              className="w-full px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              <span>Hapus Data Siswa</span>
-                            </button>
+                          {userRole === 'admin' && (
+                            <>
+                              <div className="border-t border-slate-100 my-1" />
+                              <button
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  if (confirm(`Apakah Anda yakin ingin menghapus data buku induk ${student.namaLengkap}?`)) {
+                                    onDeleteStudent(student.id);
+                                  }
+                                }}
+                                className="w-full px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span>Hapus Data Siswa</span>
+                              </button>
+                            </>
+                          )}
                           </div>
                         )}
                       </div>

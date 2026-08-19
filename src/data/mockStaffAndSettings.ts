@@ -123,5 +123,6 @@ export const defaultSchoolSettings: SchoolSettings = {
   website: 'smpntigakras.blogspot.co.id',
   kepalaSekolah: 'Dr. H. Ahmad Sunaryo, M.Pd.',
   nipKepalaSekolah: '197005121995121002',
-  tahunAjaranAktif: '2025/2026'
+  tahunAjaranAktif: '2025/2026',
+  temaAplikasi: 'indigo'
 };
