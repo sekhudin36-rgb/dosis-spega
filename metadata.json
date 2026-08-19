@@ -1,0 +1,6 @@
+{
+  "name": "Buku Induk Siswa Digital",
+  "description": "Aplikasi Buku Induk Siswa untuk mengelola identitas, riwayat akademik, foto, cetak rapor PDF, serta ekspor-impor Excel massal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
