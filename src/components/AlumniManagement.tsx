@@ -32,6 +32,7 @@ interface AlumniManagementProps {
   onDeleteStudent?: (id: string) => void;
   onViewStudent?: (student: Student) => void;
   onEditStudent?: (student: Student) => void;
+  onOpenRegisterPortal?: () => void;
 }
 
 export default function AlumniManagement({
@@ -40,7 +41,8 @@ export default function AlumniManagement({
   onSaveStudent,
   onDeleteStudent,
   onViewStudent,
-  onEditStudent
+  onEditStudent,
+  onOpenRegisterPortal
 }: AlumniManagementProps) {
   // Filter for Lulus students only
   const alumni = useMemo(() => {
@@ -189,6 +191,16 @@ export default function AlumniManagement({
             </p>
           </div>
         </div>
+
+        {onOpenRegisterPortal && (
+          <button
+            onClick={onOpenRegisterPortal}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/20 cursor-pointer shrink-0"
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>Buka Portal Pendaftaran Alumni</span>
+          </button>
+        )}
       </div>
 
       {/* Success notification */}

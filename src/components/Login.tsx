@@ -9,15 +9,22 @@ import {
   Server, 
   LayoutDashboard, 
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  Search,
+  UserPlus,
+  Sparkles,
+  ArrowLeft,
+  Globe
 } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (account: UserAccount) => void;
   accounts: UserAccount[];
+  onOpenPortal?: (tab: 'cek-siswa' | 'daftar-alumni') => void;
+  onBackToPortal?: () => void;
 }
 
-export default function Login({ onLogin, accounts }: LoginProps) {
+export default function Login({ onLogin, accounts, onOpenPortal, onBackToPortal }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -60,7 +67,7 @@ export default function Login({ onLogin, accounts }: LoginProps) {
             <GraduationCap className="w-7 h-7 text-white transform rotate-6" />
           </div>
           <span className="text-white text-2xl font-bold tracking-tight">
-            EduMaster<span className="text-indigo-400">Pro</span>
+            SMP Negeri 3 <span className="text-indigo-400">Kras</span>
           </span>
         </div>
 
@@ -108,6 +115,37 @@ export default function Login({ onLogin, accounts }: LoginProps) {
               </div>
             </div>
           </div>
+
+          {/* Quick Public Portal Banner on Left Panel */}
+          {onOpenPortal && (
+            <div className="mt-8 p-4 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  Portal Layanan Siswa & Alumni
+                </span>
+                <span className="text-[10px] text-slate-400">Terbuka Publik</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => onOpenPortal('cek-siswa')}
+                  className="px-3 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Cek Data Siswa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenPortal('daftar-alumni')}
+                  className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/10"
+                >
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>Daftar Alumni</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Developer Credit */}
@@ -131,17 +169,62 @@ export default function Login({ onLogin, accounts }: LoginProps) {
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <span className="text-slate-900 text-lg font-bold tracking-tight">
-            EduMaster<span className="text-indigo-600">Pro</span>
+            SMP Negeri 3 <span className="text-indigo-600">Kras</span>
           </span>
         </div>
 
         <div className="w-full max-w-md relative z-10 animate-fade-in">
           
-          {/* Header */}
-          <div className="mb-10">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Selamat Datang</h2>
-            <p className="mt-3 text-slate-500 font-medium">Masuk ke akun Anda untuk mengakses sistem akademik sekolah.</p>
+          {/* Back to Portal Button */}
+          <div className="mb-6">
+            <button
+              type="button"
+              onClick={() => onBackToPortal ? onBackToPortal() : onOpenPortal?.('cek-siswa')}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 transition-all cursor-pointer shadow-2xs"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Kembali ke Portal Utama</span>
+            </button>
           </div>
+
+          {/* Header */}
+          <div className="mb-8">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Login Operator</h2>
+            <p className="mt-2 text-slate-500 font-medium text-sm">Masuk ke akun Anda untuk mengelola arsip dan data Buku Induk.</p>
+          </div>
+
+          {/* Quick Public Portal Access Bar for Non-logged-in visitors */}
+          {onOpenPortal && (
+            <div className="mb-6 p-4 bg-indigo-50/80 border border-indigo-100 rounded-2xl">
+              <div className="flex items-center justify-between gap-2 mb-2.5">
+                <span className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  Layanan Publik Sekolah
+                </span>
+                <span className="text-[10px] text-indigo-600 font-semibold bg-indigo-100/60 px-2 py-0.5 rounded-full">
+                  Tanpa Perlu Login
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenPortal('cek-siswa')}
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 bg-white hover:bg-indigo-600 hover:text-white text-indigo-950 font-bold text-xs rounded-xl shadow-xs border border-indigo-200/80 transition-all cursor-pointer group"
+                >
+                  <Search className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white shrink-0" />
+                  <span className="truncate">Cek Data Siswa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenPortal('daftar-alumni')}
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 bg-white hover:bg-indigo-600 hover:text-white text-indigo-950 font-bold text-xs rounded-xl shadow-xs border border-indigo-200/80 transition-all cursor-pointer group"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white shrink-0" />
+                  <span className="truncate">Daftar Alumni</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (

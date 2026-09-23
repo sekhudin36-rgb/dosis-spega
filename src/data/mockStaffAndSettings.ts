@@ -111,7 +111,7 @@ export const mockStaff: Staff[] = [
 ];
 
 export const defaultSchoolSettings: SchoolSettings = {
-  namaSekolah: 'UPTD SMPN 3 Kras',
+  namaSekolah: 'SMP NEGERI 3 KRAS',
   npsn: '20511869',
   alamat: 'Jalan Doko, Kecamatan Kras Kode Pos : 64172',
   desaKelurahan: 'Doko',

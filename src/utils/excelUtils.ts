@@ -76,6 +76,9 @@ const EXCEL_HEADERS = [
   'Kegemaran Olahraga',
   'Kegemaran Organisasi',
   'Kegemaran Lain-lain',
+  'Penerima PIP (Ya/Tidak)',
+  'Nomor KIP',
+  'Alat Transportasi ke Sekolah',
   'Kelas Saat Ini',
   'Tahun Masuk',
   'Status (Aktif/Lulus/Pindah/Keluar)'
@@ -153,6 +156,9 @@ export function downloadExcelTemplate() {
     'Kegemaran Olahraga': 'Praja Muda Karana (Pramuka)',
     'Kegemaran Organisasi': '',
     'Kegemaran Lain-lain': '',
+    'Penerima PIP (Ya/Tidak)': 'Ya',
+    'Nomor KIP': 'KIP-2023-9981',
+    'Alat Transportasi ke Sekolah': 'Sepeda Motor',
     'Kelas Saat Ini': '7-A',
     'Tahun Masuk': '2023',
     'Status (Aktif/Lulus/Pindah/Keluar)': 'Aktif'
@@ -242,6 +248,9 @@ export function exportStudentsToExcel(students: Student[]) {
     'Kegemaran Olahraga': s.gemarOlahraga || '',
     'Kegemaran Organisasi': s.gemarOrganisasi || '',
     'Kegemaran Lain-lain': s.gemarLainnya || '',
+    'Penerima PIP (Ya/Tidak)': s.penerimaKipPip ? 'Ya' : 'Tidak',
+    'Nomor KIP': s.noKipPip || '',
+    'Alat Transportasi ke Sekolah': s.alatTransportasi || '',
     'Kelas Saat Ini': s.kelasSaatIni,
     'Tahun Masuk': s.tahunMasuk,
     'Status (Aktif/Lulus/Pindah/Keluar)': s.statusSiswa
@@ -404,6 +413,12 @@ export function parseExcelImport(file: File): Promise<Partial<Student>[]> {
             gemarOlahraga: String(row['Kegemaran Olahraga'] || '').trim(),
             gemarOrganisasi: String(row['Kegemaran Organisasi'] || '').trim(),
             gemarLainnya: String(row['Kegemaran Lain-lain'] || '').trim(),
+
+            penerimaKipPip: String(row['Penerima PIP (Ya/Tidak)'] || row['penerimaPIP'] || row['penerimaKipPip'] || '').trim().toLowerCase().startsWith('y') ||
+                            String(row['Penerima PIP (Ya/Tidak)'] || '').trim().toLowerCase() === 'true' ||
+                            String(row['Penerima PIP (Ya/Tidak)'] || '').trim().toLowerCase() === '1',
+            noKipPip: String(row['Nomor KIP'] || row['nomorKIP'] || row['noKipPip'] || '').trim(),
+            alatTransportasi: String(row['Alat Transportasi ke Sekolah'] || row['alatTransportasi'] || '').trim(),
 
             riwayatAkademik: {}
           };

@@ -23,6 +23,24 @@
     background: white !important;
     color: black !important;
   }
+  body * {
+    visibility: hidden;
+  }
+  .printable-sheet, .printable-sheet * {
+    visibility: visible;
+  }
+  .printable-sheet {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 10mm 15mm !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
   header, footer, button, .no-print {
     display: none !important;
   }

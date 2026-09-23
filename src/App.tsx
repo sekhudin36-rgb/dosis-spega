@@ -4,9 +4,10 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Student, SemesterRecord, Teacher, Staff, SchoolSettings, UserAccount } from './types';
+import { Student, SemesterRecord, Teacher, Staff, SchoolSettings, UserAccount, ActivityLog, MutationApplication } from './types';
 import { mockStudents } from './data/mockStudents';
 import { mockTeachers, mockStaff, defaultSchoolSettings } from './data/mockStaffAndSettings';
+import { defaultMutationApplications } from './data/mockMutationApplications';
 import DashboardStats from './components/DashboardStats';
 import StudentList from './components/StudentList';
 import StudentDetail from './components/StudentDetail';
@@ -18,8 +19,13 @@ import SchoolSettingsPanel from './components/SchoolSettingsPanel';
 import ClassPromotionManagement from './components/ClassPromotionManagement';
 import StudentMutationManagement from './components/StudentMutationManagement';
 import AlumniManagement from './components/AlumniManagement';
+import ActivityLogPanel from './components/ActivityLogPanel';
 import MainDashboard from './components/MainDashboard';
+import OfficialLetterGenerator from './components/OfficialLetterGenerator';
+import MonthlyReportPanel from './components/MonthlyReportPanel';
 import Login from './components/Login';
+import PublicPortal from './components/PublicPortal';
+import GoogleDriveSyncPanel from './components/GoogleDriveSyncPanel';
 import { 
   GraduationCap, 
   Clock, 
@@ -34,7 +40,19 @@ import {
   LayoutDashboard,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Globe,
+  Search,
+  Sparkles,
+  ShieldCheck,
+  History,
+  FileText,
+  BarChart3,
+  Stamp,
+  LayoutGrid,
+  Plus,
+  Check,
+  Cloud
 } from 'lucide-react';
 
 export default function App() {
@@ -45,26 +63,24 @@ export default function App() {
     { id: '2', username: 'guru', password: '123456', role: 'guru' }
   ]);
 
-  const handleLogin = (account: UserAccount) => {
-    setCurrentUser(account);
-    localStorage.setItem('buku_induk_session', JSON.stringify(account));
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('buku_induk_session');
-  };
+  // Top-level View Mode: 'portal' (Default primary landing page) | 'login' | 'dashboard'
+  const [currentViewMode, setCurrentViewMode] = useState<'portal' | 'login' | 'dashboard'>('portal');
+  const [portalActiveTab, setPortalActiveTab] = useState<'cek-siswa' | 'daftar-alumni' | 'verifikasi-qr' | 'pengajuan-mutasi'>('cek-siswa');
 
   // Core navigation state
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'siswa' | 'guru' | 'staff' | 'promotion' | 'mutasi' | 'alumni' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'siswa' | 'guru' | 'staff' | 'promotion' | 'mutasi' | 'alumni' | 'surat' | 'laporan' | 'settings' | 'logs' | 'drive'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [letterStudentId, setLetterStudentId] = useState<string | undefined>(undefined);
 
   // Core application database states
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [settings, setSettings] = useState<SchoolSettings>(defaultSchoolSettings);
+  const [mutationApplications, setMutationApplications] = useState<MutationApplication[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
 
   // Student list view states
   const [currentView, setCurrentView] = useState<'list' | 'detail' | 'form'>('list');
@@ -73,6 +89,47 @@ export default function App() {
   
   // Semester academic grade editor popup state
   const [editingSemesterId, setEditingSemesterId] = useState<string | null>(null);
+
+  // Helper for audit trail logging
+  const addActivityLog = (
+    action: ActivityLog['action'],
+    description: string,
+    targetId?: string,
+    targetName?: string
+  ) => {
+    const newLog: ActivityLog = {
+      id: 'log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      timestamp: new Date().toISOString(),
+      userId: currentUser ? currentUser.id : 'publik',
+      username: currentUser ? currentUser.username : 'Petugas / Publik',
+      userRole: currentUser ? currentUser.role : 'publik',
+      action,
+      description,
+      targetId,
+      targetName
+    };
+
+    setActivityLogs(prev => {
+      const updated = [newLog, ...prev.slice(0, 499)];
+      localStorage.setItem('buku_induk_activity_logs', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleLogin = (account: UserAccount) => {
+    setCurrentUser(account);
+    localStorage.setItem('buku_induk_session', JSON.stringify(account));
+    setCurrentViewMode('dashboard');
+    addActivityLog('AUTH_SESSION', `Operator ${account.username} (${account.role}) berhasil masuk ke sistem.`);
+  };
+
+  const handleLogout = () => {
+    const actorName = currentUser?.username || 'Operator';
+    setCurrentUser(null);
+    localStorage.removeItem('buku_induk_session');
+    setCurrentViewMode('portal');
+    addActivityLog('AUTH_SESSION', `Sesi pengguna ${actorName} telah diakhiri secara aman.`);
+  };
 
   // Load initial data from localStorage or mock data
   useEffect(() => {
@@ -94,6 +151,30 @@ export default function App() {
       } catch (e) {
         // use default
       }
+    }
+
+    // 0.2 Activity Logs
+    const savedLogs = localStorage.getItem('buku_induk_activity_logs');
+    if (savedLogs) {
+      try {
+        setActivityLogs(JSON.parse(savedLogs));
+      } catch (e) {
+        setActivityLogs([]);
+      }
+    } else {
+      const initialLogs: ActivityLog[] = [
+        {
+          id: 'log-init-1',
+          timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+          userId: 'sys-01',
+          username: 'Sistem',
+          userRole: 'admin',
+          action: 'SYSTEM',
+          description: 'Basis data Buku Induk Digital SMP Negeri 3 Kras aktif dengan mode persisten.'
+        }
+      ];
+      setActivityLogs(initialLogs);
+      localStorage.setItem('buku_induk_activity_logs', JSON.stringify(initialLogs));
     }
 
     // 1. Students
@@ -139,7 +220,12 @@ export default function App() {
     const savedSettings = localStorage.getItem('school_settings');
     if (savedSettings) {
       try {
-        setSettings(JSON.parse(savedSettings));
+        const parsed = JSON.parse(savedSettings);
+        if (parsed.namaSekolah !== 'SMP NEGERI 3 KRAS') {
+          parsed.namaSekolah = 'SMP NEGERI 3 KRAS';
+          localStorage.setItem('school_settings', JSON.stringify(parsed));
+        }
+        setSettings(parsed);
       } catch (e) {
         setSettings(defaultSchoolSettings);
       }
@@ -147,6 +233,43 @@ export default function App() {
       setSettings(defaultSchoolSettings);
       localStorage.setItem('school_settings', JSON.stringify(defaultSchoolSettings));
     }
+
+    // 5. Mutation Applications
+    const savedMutationApps = localStorage.getItem('buku_induk_mutation_applications');
+    if (savedMutationApps) {
+      try {
+        setMutationApplications(JSON.parse(savedMutationApps));
+      } catch (e) {
+        setMutationApplications(defaultMutationApplications);
+      }
+    } else {
+      setMutationApplications(defaultMutationApplications);
+      localStorage.setItem('buku_induk_mutation_applications', JSON.stringify(defaultMutationApplications));
+    }
+
+    // Secret Operator Access: Hash listener (#login, #admin, #operator)
+    const handleHashCheck = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#login' || hash === '#admin' || hash === '#operator') {
+        setCurrentViewMode('login');
+      }
+    };
+    handleHashCheck();
+    window.addEventListener('hashchange', handleHashCheck);
+
+    // Secret Operator Access: Global Keyboard Shortcut (Ctrl+Shift+L or Alt+L)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'l') || (e.altKey && e.key.toLowerCase() === 'l')) {
+        e.preventDefault();
+        setCurrentViewMode((prev) => (prev === 'login' ? 'portal' : 'login'));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashCheck);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   // Sync helpers
@@ -155,19 +278,27 @@ export default function App() {
     localStorage.setItem('buku_induk_students', JSON.stringify(updatedList));
   };
 
+  const saveAndSyncMutationApplications = (updatedList: MutationApplication[]) => {
+    setMutationApplications(updatedList);
+    localStorage.setItem('buku_induk_mutation_applications', JSON.stringify(updatedList));
+  };
+
   const saveAndSyncTeachers = (updatedList: Teacher[]) => {
     setTeachers(updatedList);
     localStorage.setItem('buku_induk_teachers', JSON.stringify(updatedList));
+    addActivityLog('PENGATURAN', `Total ${updatedList.length} data pendidik tersinkronisasi.`);
   };
 
   const saveAndSyncStaff = (updatedList: Staff[]) => {
     setStaffList(updatedList);
     localStorage.setItem('buku_induk_staff', JSON.stringify(updatedList));
+    addActivityLog('PENGATURAN', `Total ${updatedList.length} data tenaga kependidikan tersinkronisasi.`);
   };
 
   const saveAndSyncSettings = (updatedSettings: SchoolSettings) => {
     setSettings(updatedSettings);
     localStorage.setItem('school_settings', JSON.stringify(updatedSettings));
+    addActivityLog('PENGATURAN', 'Profil sekolah & konfigurasi tahun ajaran diperbarui.');
   };
 
   const handleResetDatabase = () => {
@@ -180,12 +311,15 @@ export default function App() {
     setTeachers(mockTeachers);
     setStaffList(mockStaff);
     setSettings(defaultSchoolSettings);
+    setMutationApplications(defaultMutationApplications);
 
     localStorage.setItem('buku_induk_students', JSON.stringify(mockStudents));
     localStorage.setItem('buku_induk_teachers', JSON.stringify(mockTeachers));
     localStorage.setItem('buku_induk_staff', JSON.stringify(mockStaff));
     localStorage.setItem('school_settings', JSON.stringify(defaultSchoolSettings));
+    localStorage.setItem('buku_induk_mutation_applications', JSON.stringify(defaultMutationApplications));
     
+    addActivityLog('SYSTEM', 'Administrator melakukan penyetelan ulang basis data ke bawaan.');
     setActiveTab('siswa');
     setCurrentView('list');
     setSelectedStudent(null);
@@ -195,12 +329,17 @@ export default function App() {
     restoredStudents: Student[],
     restoredTeachers: Teacher[],
     restoredStaff: Staff[],
-    restoredSettings: SchoolSettings
+    restoredSettings: SchoolSettings,
+    restoredMutationApplications?: MutationApplication[]
   ) => {
     saveAndSyncStudents(restoredStudents);
     saveAndSyncTeachers(restoredTeachers);
     saveAndSyncStaff(restoredStaff);
     saveAndSyncSettings(restoredSettings);
+    if (restoredMutationApplications) {
+      saveAndSyncMutationApplications(restoredMutationApplications);
+    }
+    addActivityLog('CADANGAN_DATA', `Pemulihan cadangan data: ${restoredStudents.length} siswa, ${restoredTeachers.length} guru, ${restoredStaff.length} staf.`);
   };
 
   // Student specific handlers
@@ -208,11 +347,13 @@ export default function App() {
     let updatedList: Student[] = [];
     if (formMode === 'add') {
       updatedList = [savedStudent, ...students];
+      addActivityLog('TAMBAH_SISWA', `Menambahkan siswa baru: ${savedStudent.namaLengkap} (NIS: ${savedStudent.nis})`, savedStudent.id, savedStudent.namaLengkap);
     } else {
       updatedList = students.map(s => s.id === savedStudent.id ? savedStudent : s);
       if (selectedStudent?.id === savedStudent.id) {
         setSelectedStudent(savedStudent);
       }
+      addActivityLog('EDIT_SISWA', `Memperbarui data siswa: ${savedStudent.namaLengkap} (NIS: ${savedStudent.nis})`, savedStudent.id, savedStudent.namaLengkap);
     }
 
     saveAndSyncStudents(updatedList);
@@ -220,8 +361,10 @@ export default function App() {
   };
 
   const handleDeleteStudent = (id: string) => {
+    const studentToDelete = students.find(s => s.id === id);
     const updatedList = students.filter(s => s.id !== id);
     saveAndSyncStudents(updatedList);
+    addActivityLog('HAPUS_SISWA', `Menghapus arsip siswa ${studentToDelete?.namaLengkap || id} (ID: ${id})`, id, studentToDelete?.namaLengkap);
     if (selectedStudent?.id === id) {
       setSelectedStudent(null);
       setCurrentView('list');
@@ -345,6 +488,7 @@ export default function App() {
     
     setSelectedStudent(updatedStudent);
     saveAndSyncStudents(updatedList);
+    addActivityLog('NILAI_RAPOR', `Input nilai semester ${record.namaSemester || record.semesterId} untuk ${selectedStudent.namaLengkap} (NIS: ${selectedStudent.nis})`, selectedStudent.id, selectedStudent.namaLengkap);
     setEditingSemesterId(null);
   };
 
@@ -382,8 +526,126 @@ export default function App() {
     saveAndSyncStaff(updated);
   };
 
-  if (!currentUser) {
-    return <Login onLogin={handleLogin} accounts={accounts} />;
+  // Handler for public alumni registration (Tracer study & digital alumni directory)
+  const handleRegisterAlumni = (alumniData: {
+    namaLengkap: string;
+    nis?: string;
+    nisn?: string;
+    jenisKelamin: 'L' | 'P';
+    tahunLulus: string;
+    alumniLanjutKe: string;
+    alumniCatatan?: string;
+    telepon: string;
+    email?: string;
+    alamat?: string;
+    foto?: string;
+  }) => {
+    // Check if matching NIS, NISN or exact name exists in students
+    const existingIndex = students.findIndex(s => 
+      (alumniData.nis && s.nis && s.nis.trim() === alumniData.nis.trim()) ||
+      (alumniData.nisn && s.nisn && s.nisn.trim() === alumniData.nisn.trim()) ||
+      (s.namaLengkap.toLowerCase().trim() === alumniData.namaLengkap.toLowerCase().trim())
+    );
+
+    let resultStudent: Student;
+    let updatedList = [...students];
+
+    if (existingIndex >= 0) {
+      const existing = students[existingIndex];
+      resultStudent = {
+        ...existing,
+        namaLengkap: alumniData.namaLengkap || existing.namaLengkap,
+        jenisKelamin: alumniData.jenisKelamin || existing.jenisKelamin,
+        statusSiswa: 'Lulus',
+        tanggalLulus: `${alumniData.tahunLulus}-06-15`,
+        alumniLanjutKe: alumniData.alumniLanjutKe,
+        alumniCatatan: alumniData.alumniCatatan || existing.alumniCatatan || '',
+        telepon: alumniData.telepon || existing.telepon,
+        email: alumniData.email || existing.email || '',
+        alamat: alumniData.alamat || existing.alamat,
+        foto: alumniData.foto || existing.foto || ''
+      };
+      updatedList[existingIndex] = resultStudent;
+    } else {
+      // Create new alumnus student record
+      const newId = `alumni-${Date.now()}`;
+      resultStudent = {
+        id: newId,
+        nis: alumniData.nis || `ALM-${Math.floor(1000 + Math.random() * 9000)}`,
+        nisn: alumniData.nisn || '',
+        namaLengkap: alumniData.namaLengkap,
+        namaPanggilan: alumniData.namaLengkap.split(' ')[0],
+        jenisKelamin: alumniData.jenisKelamin,
+        tempatLahir: 'Kediri',
+        tanggalLahir: `${parseInt(alumniData.tahunLulus) - 15}-01-01`,
+        agama: 'Islam',
+        kewarganegaraan: 'WNI',
+        alamat: alumniData.alamat || 'Kras, Kediri',
+        telepon: alumniData.telepon,
+        email: alumniData.email || '',
+        kelasSaatIni: 'Alumni',
+        tahunMasuk: (parseInt(alumniData.tahunLulus) - 3).toString(),
+        statusSiswa: 'Lulus',
+        foto: alumniData.foto || '',
+        tanggalLulus: `${alumniData.tahunLulus}-06-15`,
+        alumniLanjutKe: alumniData.alumniLanjutKe,
+        alumniCatatan: alumniData.alumniCatatan || '',
+        namaAyah: '-',
+        pekerjaanAyah: '-',
+        namaIbu: '-',
+        pekerjaanIbu: '-',
+        teleponOrangTua: alumniData.telepon,
+        alamatOrangTua: alumniData.alamat || '',
+        riwayatAkademik: {}
+      };
+      updatedList = [resultStudent, ...updatedList];
+    }
+
+    saveAndSyncStudents(updatedList);
+    return {
+      success: true,
+      message: existingIndex >= 0 
+        ? 'Data Anda berhasil diverifikasi dan disinkronkan dengan Buku Induk Alumni!'
+        : 'Pendaftaran alumni baru berhasil dicatat dalam Buku Induk Digital!',
+      student: resultStudent
+    };
+  };
+
+  // 1. PRIMARY VIEW: PORTAL UTAMA (Default main landing page for student checks & alumni tracer)
+  if (currentViewMode === 'portal') {
+    return (
+      <PublicPortal
+        students={students}
+        settings={settings}
+        initialTab={portalActiveTab}
+        currentUser={currentUser}
+        mutationApplications={mutationApplications}
+        onSubmitMutationApplication={(newApp) => {
+          const updated = [newApp, ...mutationApplications];
+          saveAndSyncMutationApplications(updated);
+          addActivityLog('MUTASI_SISWA', `Pengajuan mutasi online masuk: ${newApp.namaSiswa} (${newApp.nomorRegistrasi})`);
+        }}
+        onOpenLogin={() => setCurrentViewMode('login')}
+        onGoToDashboard={() => setCurrentViewMode('dashboard')}
+        onLogout={handleLogout}
+        onRegisterAlumni={handleRegisterAlumni}
+      />
+    );
+  }
+
+  // 2. LOGIN VIEW: When operator clicks "Login Operator / Guru"
+  if (currentViewMode === 'login' || (!currentUser && currentViewMode === 'dashboard')) {
+    return (
+      <Login 
+        onLogin={handleLogin} 
+        accounts={accounts} 
+        onBackToPortal={() => setCurrentViewMode('portal')}
+        onOpenPortal={(tab) => {
+          setPortalActiveTab(tab);
+          setCurrentViewMode('portal');
+        }} 
+      />
+    );
   }
 
   // Determine sidebar theme
@@ -448,10 +710,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex">
       
-      {/* LEFT SIDEBAR - Responsive */}
-      <aside className={`relative ${theme.sidebar} ${isSidebarMinimized ? 'w-20' : 'w-64'} fixed inset-y-0 left-0 z-50 transform lg:translate-x-0 lg:static lg:flex lg:flex-col transition-all duration-300 ease-in-out shrink-0 ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } no-print`}>
+      {/* LEFT SIDEBAR - Desktop only */}
+      <aside className={`relative ${theme.sidebar} ${isSidebarMinimized ? 'w-20' : 'w-64'} shrink-0 hidden lg:flex lg:flex-col transition-all duration-300 ease-in-out no-print`}>
         {/* Toggle Button for Desktop */}
         <button
           onClick={() => setIsSidebarMinimized(!isSidebarMinimized)}
@@ -473,13 +733,6 @@ export default function App() {
               </div>
             )}
           </div>
-          {/* Mobile close button */}
-          <button 
-            onClick={() => setIsSidebarOpen(false)}
-            className={`lg:hidden p-1 ${theme.sidebarText} hover:${theme.titleText} rounded-lg cursor-pointer shrink-0`}
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Sidebar Navigation */}
@@ -598,11 +851,96 @@ export default function App() {
             </div>
           </div>
 
+          {/* LAYANAN ADMINISTRASI & TATA USAHA SECTION */}
+          <div className="space-y-2">
+            {!isSidebarMinimized && <span className={`px-3 text-[10px] font-bold ${theme.sidebarText} uppercase tracking-widest block truncate`}>Layanan Tata Usaha</span>}
+            <div className="space-y-1">
+              <button
+                title="Cetak Surat Keterangan Resmi"
+                onClick={() => {
+                  setActiveTab('surat');
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center ${isSidebarMinimized ? 'justify-center px-0' : 'gap-2.5 px-3'} py-2 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                  activeTab === 'surat' ? theme.activeMenu : theme.inactiveMenu
+                }`}
+              >
+                <FileText className="w-4 h-4 shrink-0 text-amber-400" />
+                {!isSidebarMinimized && <span className="truncate">Surat Keterangan</span>}
+              </button>
+
+              <button
+                title="Rekapitulasi & Laporan Bulanan TU"
+                onClick={() => {
+                  setActiveTab('laporan');
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center ${isSidebarMinimized ? 'justify-center px-0' : 'gap-2.5 px-3'} py-2 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                  activeTab === 'laporan' ? theme.activeMenu : theme.inactiveMenu
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 shrink-0 text-emerald-400" />
+                {!isSidebarMinimized && <span className="truncate">Laporan Bulanan TU</span>}
+              </button>
+            </div>
+          </div>
+
+          {/* LAYANAN PORTAL UTAMA SECTION */}
+          <div className="space-y-2">
+            {!isSidebarMinimized && <span className={`px-3 text-[10px] font-bold ${theme.sidebarText} uppercase tracking-widest block truncate`}>Portal Utama (Publik)</span>}
+            <div className="space-y-1">
+              <button
+                title="Cek Data Siswa (Portal Utama)"
+                onClick={() => {
+                  setPortalActiveTab('cek-siswa');
+                  setCurrentViewMode('portal');
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center ${isSidebarMinimized ? 'justify-center px-0' : 'gap-2.5 px-3'} py-2 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${theme.inactiveMenu}`}
+              >
+                <Search className="w-4 h-4 shrink-0 text-indigo-400" />
+                {!isSidebarMinimized && <span className="truncate">Cek Data Siswa</span>}
+              </button>
+
+              <button
+                title="Pendaftaran Alumni (Portal Utama)"
+                onClick={() => {
+                  setPortalActiveTab('daftar-alumni');
+                  setCurrentViewMode('portal');
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center ${isSidebarMinimized ? 'justify-center px-0' : 'gap-2.5 px-3'} py-2 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${theme.inactiveMenu}`}
+              >
+                <GraduationCap className="w-4 h-4 shrink-0 text-indigo-400" />
+                {!isSidebarMinimized && <span className="truncate">Portal Daftar Alumni</span>}
+              </button>
+            </div>
+          </div>
+
           {/* CONFIGURATION SECTION */}
           {currentUser.role === 'admin' && (
             <div className="space-y-2">
-              {!isSidebarMinimized && <span className={`px-3 text-[10px] font-bold ${theme.sidebarText} uppercase tracking-widest block truncate`}>Konfigurasi</span>}
+              {!isSidebarMinimized && <span className={`px-3 text-[10px] font-bold ${theme.sidebarText} uppercase tracking-widest block truncate`}>Keamanan & Konfigurasi</span>}
               <div className="space-y-1">
+                <button
+                  title="Google Drive Cloud Database"
+                  onClick={() => {
+                    setActiveTab('drive');
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center ${isSidebarMinimized ? 'justify-center px-0' : 'gap-2.5 px-3'} py-2 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                    activeTab === 'drive' ? theme.activeMenu : theme.inactiveMenu
+                  }`}
+                >
+                  <Cloud className="w-4 h-4 shrink-0 text-cyan-400" />
+                  {!isSidebarMinimized && (
+                    <div className="flex items-center justify-between w-full min-w-0">
+                      <span className="truncate">Google Drive Sync</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0 ml-1" />
+                    </div>
+                  )}
+                </button>
+
                 <button
                   title="Pengaturan Sekolah"
                   onClick={() => {
@@ -615,6 +953,20 @@ export default function App() {
                 >
                   <Settings className="w-4 h-4 shrink-0" />
                   {!isSidebarMinimized && <span className="truncate">Pengaturan Sekolah</span>}
+                </button>
+
+                <button
+                  title="Audit Trail & Rekam Jejak Aktivitas"
+                  onClick={() => {
+                    setActiveTab('logs');
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center ${isSidebarMinimized ? 'justify-center px-0' : 'gap-2.5 px-3'} py-2 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                    activeTab === 'logs' ? theme.activeMenu : theme.inactiveMenu
+                  }`}
+                >
+                  <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-500" />
+                  {!isSidebarMinimized && <span className="truncate">Audit Trail & Log</span>}
                 </button>
               </div>
             </div>
@@ -644,49 +996,62 @@ export default function App() {
         </div>
       </aside>
 
-      {/* MOBILE SIDEBAR BACKDROP */}
-      {isSidebarOpen && (
-        <div 
-          onClick={() => setIsSidebarOpen(false)}
-          className="lg:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 no-print"
-        />
-      )}
-
       {/* RIGHT SIDE WORKSPACE */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         
         {/* Top Professional Header Bar */}
-        <header className="bg-white border-b border-slate-100 shadow-2xs sticky top-0 z-30 px-6 py-4.5 no-print">
-          <div className="flex items-center justify-between gap-4">
+        <header className="bg-white border-b border-slate-100 shadow-2xs sticky top-0 z-30 px-3.5 sm:px-6 py-2.5 sm:py-4.5 no-print">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
             
-            {/* Hamburger Button + School Title */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 rounded-lg cursor-pointer shrink-0"
-              >
-                <Menu className="w-4 h-4" />
-              </button>
+            {/* School Branding & Title (No Hamburger Menu) */}
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs lg:hidden">
+                <GraduationCap className="w-4.5 h-4.5" />
+              </div>
               
-              <div className="shrink-0">
-                <h1 className="text-md font-bold tracking-tight text-slate-800 leading-tight">
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-800 leading-tight truncate">
                   Buku Induk Siswa Digital
                 </h1>
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
+                <p className="text-[9px] sm:text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5 truncate">
                   {settings.namaSekolah}
                 </p>
               </div>
             </div>
 
             {/* Quick metadata and log session info */}
-            <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
+            <div className="flex items-center gap-1.5 sm:gap-3 text-xs text-slate-500 font-medium shrink-0">
+              <button
+                onClick={() => setActiveTab('drive')}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0 ${
+                  activeTab === 'drive' 
+                    ? 'bg-indigo-600 text-white border-indigo-700' 
+                    : 'bg-sky-50 hover:bg-sky-100 text-sky-800 border-sky-200'
+                }`}
+                title="Penyimpanan Basis Data Google Drive"
+              >
+                <Cloud className={`w-3.5 h-3.5 ${activeTab === 'drive' ? 'text-white' : 'text-sky-600'}`} />
+                <span className="hidden sm:inline">Google Drive</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setPortalActiveTab('cek-siswa');
+                  setCurrentViewMode('portal');
+                }}
+                className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-indigo-200 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
+                title="Buka Portal Utama Siswa & Alumni"
+              >
+                <Globe className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden xs:inline">Portal Publik</span>
+              </button>
               <div className="hidden sm:flex items-center gap-1.5 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100/50 shrink-0">
                 <User className="w-3.5 h-3.5 text-indigo-500" />
                 <span>Operator: <strong className="text-indigo-900 uppercase tracking-wide">{currentUser.username}</strong></span>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 font-mono text-[11px] shrink-0">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                <span>T.A {settings.tahunAjaranAktif} (Aktif)</span>
+              <div className="flex items-center gap-1.5 bg-slate-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-slate-200 font-mono text-[10px] sm:text-[11px] shrink-0">
+                <Clock className="w-3.5 h-3.5 text-slate-400 hidden xs:inline" />
+                <span>T.A {settings.tahunAjaranAktif}</span>
               </div>
             </div>
             
@@ -694,7 +1059,7 @@ export default function App() {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 px-6 py-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 px-3 sm:px-6 py-4 sm:py-8 pb-24 lg:pb-8 max-w-7xl w-full mx-auto">
           
           {/* TAB 0: MAIN DASHBOARD */}
           {activeTab === 'dashboard' && (
@@ -704,6 +1069,10 @@ export default function App() {
               staffList={staffList}
               settings={settings}
               userRole={currentUser.role}
+              onOpenPortal={(tab) => {
+                setPortalActiveTab(tab);
+                setCurrentViewMode('portal');
+              }}
               onNavigate={(tab) => {
                 setActiveTab(tab);
                 if (tab === 'siswa') {
@@ -767,6 +1136,10 @@ export default function App() {
                     onOpenGradeEditor={(semId) => {
                       setEditingSemesterId(semId);
                     }}
+                    onGenerateLetter={(studentId) => {
+                      setLetterStudentId(studentId);
+                      setActiveTab('surat');
+                    }}
                   />
                 </div>
               )}
@@ -824,7 +1197,10 @@ export default function App() {
               <ClassPromotionManagement 
                 students={students}
                 userRole={currentUser.role}
-                onPromoteStudents={saveAndSyncStudents}
+                onPromoteStudents={(updated) => {
+                  saveAndSyncStudents(updated);
+                  addActivityLog('KENAIKAN_KELAS', `Memproses kenaikan dan penataan kelas untuk ${updated.length} siswa.`);
+                }}
               />
             </div>
           )}
@@ -835,6 +1211,10 @@ export default function App() {
               <StudentMutationManagement 
                 students={students}
                 userRole={currentUser.role}
+                settings={settings}
+                mutationApplications={mutationApplications}
+                onSaveMutationApplications={saveAndSyncMutationApplications}
+                onAddActivityLog={(action, desc) => addActivityLog(action, desc)}
                 onSaveStudent={handleUpdateSingleStudent}
                 onDeleteStudent={handleDeleteStudent}
                 onViewStudent={(student) => {
@@ -871,6 +1251,42 @@ export default function App() {
                   setCurrentView('form');
                   setActiveTab('siswa');
                 }}
+                onOpenRegisterPortal={() => {
+                  setPortalActiveTab('daftar-alumni');
+                  setCurrentViewMode('portal');
+                }}
+              />
+            </div>
+          )}
+
+          {/* TAB: CETAK SURAT KETERANGAN RESMI */}
+          {activeTab === 'surat' && (
+            <div className="animate-fade-in">
+              <OfficialLetterGenerator 
+                students={students}
+                settings={settings}
+                userRole={currentUser.role}
+                initialStudentId={letterStudentId}
+                onBack={() => {
+                  setActiveTab('siswa');
+                  setLetterStudentId(undefined);
+                }}
+                onLogPrint={(letterType, studentName) => {
+                  addActivityLog('CETAK_SURAT', `Menerbitkan dan mencetak ${letterType} untuk siswa: ${studentName}.`, undefined, studentName);
+                }}
+              />
+            </div>
+          )}
+
+          {/* TAB: REKAPITULASI DEMOGRAFI & LAPORAN BULANAN TU */}
+          {activeTab === 'laporan' && (
+            <div className="animate-fade-in">
+              <MonthlyReportPanel 
+                students={students}
+                teachers={teachers}
+                staffList={staffList}
+                settings={settings}
+                userRole={currentUser.role}
               />
             </div>
           )}
@@ -883,9 +1299,54 @@ export default function App() {
                 students={students}
                 teachers={teachers}
                 staffList={staffList}
+                mutationApplications={mutationApplications}
                 onSaveSettings={saveAndSyncSettings}
                 onResetDatabase={handleResetDatabase}
                 onRestoreDatabase={handleRestoreDatabase}
+                onOpenGoogleDrive={() => setActiveTab('drive')}
+              />
+            </div>
+          )}
+
+          {/* TAB: GOOGLE DRIVE CLOUD DATABASE */}
+          {activeTab === 'drive' && (
+            <div className="animate-fade-in">
+              <GoogleDriveSyncPanel 
+                students={students}
+                teachers={teachers}
+                staffList={staffList}
+                settings={settings}
+                activityLogs={activityLogs}
+                mutationApplications={mutationApplications}
+                onRestoreData={(restored) => {
+                  saveAndSyncStudents(restored.students);
+                  saveAndSyncTeachers(restored.teachers);
+                  saveAndSyncStaff(restored.staff);
+                  saveAndSyncSettings(restored.settings);
+                  if (restored.mutationApplications) {
+                    saveAndSyncMutationApplications(restored.mutationApplications);
+                  }
+                  if (restored.activityLogs) {
+                    setActivityLogs(restored.activityLogs);
+                    localStorage.setItem('buku_induk_activity_logs', JSON.stringify(restored.activityLogs));
+                  }
+                  addActivityLog('CADANGAN_DATA', `Memulihkan pangkalan data dari Google Drive (${restored.students.length} siswa).`);
+                }}
+                onLogActivity={(action, desc) => addActivityLog(action, desc)}
+              />
+            </div>
+          )}
+
+          {/* TAB 5: AUDIT TRAIL & LOG AKTIVITAS */}
+          {activeTab === 'logs' && currentUser?.role === 'admin' && (
+            <div className="animate-fade-in">
+              <ActivityLogPanel 
+                logs={activityLogs}
+                onClearLogs={() => {
+                  setActivityLogs([]);
+                  localStorage.removeItem('buku_induk_activity_logs');
+                  addActivityLog('SYSTEM', 'Seluruh riwayat audit trail log telah dibersihkan oleh Administrator.');
+                }}
               />
             </div>
           )}
@@ -907,6 +1368,510 @@ export default function App() {
           <p>© 2026 {settings.namaSekolah}. Sistem Buku Induk Digital & Hasil Belajar Rapor PDF Otomatis.</p>
           <p className="mt-1 text-[10px] text-slate-300 font-mono">Platform Ingress Port: 3000 • In-Sync LocalStorage engine</p>
         </footer>
+
+        {/* MOBILE BOTTOM NAVIGATION BAR */}
+        <nav 
+          aria-label="Navigasi Bawah Mobile"
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 py-1.5 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] no-print flex items-center justify-around gap-1"
+        >
+          {/* 1. Beranda */}
+          <button
+            onClick={() => {
+              setActiveTab('dashboard');
+              setIsMobileMenuOpen(false);
+            }}
+            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer ${
+              activeTab === 'dashboard' && !isMobileMenuOpen
+                ? 'bg-indigo-50 text-indigo-700 font-bold scale-[1.02]' 
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5 tracking-tight font-medium leading-none">Beranda</span>
+          </button>
+
+          {/* 2. Siswa */}
+          <button
+            onClick={() => {
+              setActiveTab('siswa');
+              setCurrentView('list');
+              setSelectedStudent(null);
+              setIsMobileMenuOpen(false);
+            }}
+            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer ${
+              activeTab === 'siswa' && !isMobileMenuOpen
+                ? 'bg-indigo-50 text-indigo-700 font-bold scale-[1.02]' 
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Users className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5 tracking-tight font-medium leading-none">Siswa</span>
+          </button>
+
+          {/* 3. Surat TU */}
+          <button
+            onClick={() => {
+              setActiveTab('surat');
+              setIsMobileMenuOpen(false);
+            }}
+            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer ${
+              activeTab === 'surat' && !isMobileMenuOpen
+                ? 'bg-amber-50 text-amber-700 font-bold scale-[1.02]' 
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5 tracking-tight font-medium leading-none">Surat TU</span>
+          </button>
+
+          {/* 4. Laporan */}
+          <button
+            onClick={() => {
+              setActiveTab('laporan');
+              setIsMobileMenuOpen(false);
+            }}
+            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer ${
+              activeTab === 'laporan' && !isMobileMenuOpen
+                ? 'bg-emerald-50 text-emerald-700 font-bold scale-[1.02]' 
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5 tracking-tight font-medium leading-none">Laporan</span>
+          </button>
+
+          {/* 5. Menu Utama (Bottom Sheet Trigger) */}
+          <button
+            onClick={() => setIsMobileMenuOpen(prev => !prev)}
+            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 cursor-pointer ${
+              isMobileMenuOpen 
+                ? 'bg-indigo-600 text-white font-bold shadow-xs scale-[1.02]' 
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+            title="Buka Menu Lengkap"
+          >
+            <div className="relative">
+              <LayoutGrid className="w-5 h-5" />
+              {!isMobileMenuOpen && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+              )}
+            </div>
+            <span className="text-[10px] mt-0.5 tracking-tight font-medium leading-none">Menu</span>
+          </button>
+        </nav>
+
+        {/* MOBILE BOTTOM MENU SHEET */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end no-print">
+            {/* Backdrop */}
+            <div 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+            />
+
+            {/* Sheet Container */}
+            <div className="relative bg-white rounded-t-3xl shadow-2xl border-t border-slate-100 max-h-[88vh] flex flex-col z-10 animate-slide-up overflow-hidden">
+              
+              {/* Sheet Drag Handle & Header */}
+              <div className="pt-3 pb-3 px-5 border-b border-slate-100 flex flex-col shrink-0 bg-slate-50/50">
+                <div className="w-12 h-1 bg-slate-300 rounded-full mx-auto mb-3" />
+                
+                <div className="w-full flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">Menu Sistem Buku Induk</h3>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        {settings.namaSekolah} • <span className="text-indigo-600 font-semibold">{currentUser.username}</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Quick Add Student Action */}
+                    {currentUser.role === 'admin' && (
+                      <button
+                        onClick={() => {
+                          setActiveTab('siswa');
+                          setSelectedStudent(null);
+                          setFormMode('add');
+                          setCurrentView('form');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-xl text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                        title="Tambah Siswa Baru"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Siswa</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
+                      title="Tutup Menu"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sheet Scrollable Menu Grid */}
+              <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(88vh-85px)] pb-12">
+                
+                {/* Section 1: Akademik & Kesiswaan */}
+                <div>
+                  <div className="flex items-center justify-between px-1 mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Akademik & Siswa
+                    </span>
+                    <span className="text-[10px] text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full">
+                      {students.length} Siswa Terdaftar
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-left">
+                    <button
+                      onClick={() => {
+                        setActiveTab('dashboard');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        activeTab === 'dashboard' 
+                          ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-200 shadow-2xs font-semibold' 
+                          : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                          <LayoutDashboard className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Dashboard</div>
+                          <div className="text-[9px] text-slate-400">Statistik Utama</div>
+                        </div>
+                      </div>
+                      {activeTab === 'dashboard' && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('siswa');
+                        setCurrentView('list');
+                        setSelectedStudent(null);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        activeTab === 'siswa' 
+                          ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-200 shadow-2xs font-semibold' 
+                          : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Buku Induk</div>
+                          <div className="text-[9px] text-slate-400">Data Pokok Siswa</div>
+                        </div>
+                      </div>
+                      {activeTab === 'siswa' && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('kenaikan');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        activeTab === 'kenaikan' 
+                          ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-200 shadow-2xs font-semibold' 
+                          : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                          <TrendingUp className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Kenaikan Kelas</div>
+                          <div className="text-[9px] text-slate-400">Naik & Lulus Massal</div>
+                        </div>
+                      </div>
+                      {activeTab === 'kenaikan' && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('mutasi');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        activeTab === 'mutasi' 
+                          ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-200 shadow-2xs font-semibold' 
+                          : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                          <ArrowLeftRight className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Mutasi Siswa</div>
+                          <div className="text-[9px] text-slate-400">Masuk & Keluar</div>
+                        </div>
+                      </div>
+                      {activeTab === 'mutasi' && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('alumni');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`col-span-2 p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        activeTab === 'alumni' 
+                          ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-200 shadow-2xs font-semibold' 
+                          : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                          <GraduationCap className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Database Alumni & Penelusuran Tamatan</div>
+                          <div className="text-[9px] text-slate-400">Pangkalan data alumni dan rekap pelacakan kerja/kuliah</div>
+                        </div>
+                      </div>
+                      {activeTab === 'alumni' && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Section 2: Administrasi & TU */}
+                <div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-2">
+                    Tata Usaha & GTK
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-left">
+                    <button
+                      onClick={() => {
+                        setActiveTab('surat');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        activeTab === 'surat' 
+                          ? 'bg-amber-50/80 border-amber-300 text-amber-900 ring-1 ring-amber-200 shadow-2xs font-semibold' 
+                          : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Surat Resmi TU</div>
+                          <div className="text-[9px] text-slate-400">Kop & TTD Otomatis</div>
+                        </div>
+                      </div>
+                      {activeTab === 'surat' && <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('laporan');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        activeTab === 'laporan' 
+                          ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900 ring-1 ring-emerald-200 shadow-2xs font-semibold' 
+                          : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                          <BarChart3 className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Laporan Bulanan</div>
+                          <div className="text-[9px] text-slate-400">Rekap Mutasi & Siswa</div>
+                        </div>
+                      </div>
+                      {activeTab === 'laporan' && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('teachers');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        activeTab === 'teachers' 
+                          ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-200 shadow-2xs font-semibold' 
+                          : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Data Guru</div>
+                          <div className="text-[9px] text-slate-400">{teachers.length} Tenaga Pendidik</div>
+                        </div>
+                      </div>
+                      {activeTab === 'teachers' && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('staff');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        activeTab === 'staff' 
+                          ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-200 shadow-2xs font-semibold' 
+                          : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                          <BriefcaseBusiness className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">Tenaga Kependidikan</div>
+                          <div className="text-[9px] text-slate-400">{staffList.length} Staf & TU</div>
+                        </div>
+                      </div>
+                      {activeTab === 'staff' && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Section 3: Layanan Publik & Konfigurasi */}
+                <div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-2">
+                    Layanan Publik & Konfigurasi
+                  </h4>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => {
+                        setPortalActiveTab('cek-siswa');
+                        setCurrentViewMode('portal');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full p-3 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl flex items-center justify-between shadow-xs transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white/20 text-white flex items-center justify-center">
+                          <Globe className="w-4.5 h-4.5" />
+                        </div>
+                        <div className="text-left">
+                          <div className="text-xs font-bold">Buka Portal Publik Siswa</div>
+                          <div className="text-[10px] text-indigo-100">Cek Siswa, Validasi Dokumen & Alumni</div>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-indigo-200" />
+                    </button>
+
+                    {currentUser.role === 'admin' && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => {
+                            setActiveTab('settings');
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                            activeTab === 'settings' 
+                              ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-200 shadow-2xs font-semibold' 
+                              : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 text-left">
+                            <div className="w-8 h-8 rounded-lg bg-slate-200/80 text-slate-700 flex items-center justify-center shrink-0">
+                              <Settings className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold truncate">Pengaturan</div>
+                              <div className="text-[9px] text-slate-400">Kop & T.A Sekolah</div>
+                            </div>
+                          </div>
+                          {activeTab === 'settings' && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveTab('logs');
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                            activeTab === 'logs' 
+                              ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-200 shadow-2xs font-semibold' 
+                              : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 text-left">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                              <ShieldCheck className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold truncate">Audit Trail</div>
+                              <div className="text-[9px] text-slate-400">Log Rekam Jejak</div>
+                            </div>
+                          </div>
+                          {activeTab === 'logs' && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveTab('drive');
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`col-span-2 p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                            activeTab === 'drive' 
+                              ? 'bg-sky-50/90 border-sky-300 text-sky-900 ring-1 ring-sky-200 shadow-2xs font-semibold' 
+                              : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 text-left">
+                            <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+                              <Cloud className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold truncate">Penyimpanan Google Drive</div>
+                              <div className="text-[9px] text-slate-400">Pangkalan data awan & multi-perangkat</div>
+                            </div>
+                          </div>
+                          {activeTab === 'drive' && <Check className="w-3.5 h-3.5 text-sky-600 shrink-0" />}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section 4: Akun & Keluar */}
+                <div className="pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Keluar dari Akun Operator</span>
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

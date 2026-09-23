@@ -19,7 +19,9 @@ import {
   Briefcase,
   Layers,
   ArrowLeftRight,
-  ClipboardList
+  ClipboardList,
+  Search,
+  ShieldCheck
 } from 'lucide-react';
 
 interface MainDashboardProps {
@@ -28,10 +30,11 @@ interface MainDashboardProps {
   staffList: Staff[];
   settings: SchoolSettings;
   userRole?: 'admin' | 'guru';
-  onNavigate: (tab: 'siswa' | 'guru' | 'staff' | 'promotion' | 'mutasi' | 'alumni' | 'settings') => void;
+  onNavigate: (tab: 'siswa' | 'guru' | 'staff' | 'promotion' | 'mutasi' | 'alumni' | 'settings' | 'logs') => void;
+  onOpenPortal?: (tab: 'cek-siswa' | 'daftar-alumni') => void;
 }
 
-export default function MainDashboard({ students, teachers, staffList, settings, userRole = 'admin', onNavigate }: MainDashboardProps) {
+export default function MainDashboard({ students, teachers, staffList, settings, userRole = 'admin', onNavigate, onOpenPortal }: MainDashboardProps) {
   // States
   const [hoveredBar, setHoveredBar] = useState<string | null>(null);
   const [hoveredScoreBar, setHoveredScoreBar] = useState<string | null>(null);
@@ -133,10 +136,19 @@ export default function MainDashboard({ students, teachers, staffList, settings,
             </div>
             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Selamat Datang di Portal Buku Induk</h2>
             <p className="text-slate-300 text-xs md:text-sm max-w-xl font-medium">
-              Sistem pengarsipan digital SMP Negeri Indonesia Jaya. Kelola biodata siswa, guru, rekapitulasi nilai rapor, hingga riwayat kependidikan dengan presisi tinggi.
+              Sistem pengarsipan digital {settings.namaSekolah}. Kelola biodata siswa, guru, rekapitulasi nilai rapor, hingga riwayat kependidikan dengan presisi tinggi.
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {onOpenPortal && (
+              <button
+                onClick={() => onOpenPortal('cek-siswa')}
+                className="px-4 py-2.5 bg-indigo-600/90 hover:bg-indigo-600 text-white font-bold rounded-2xl text-xs transition-all shadow-md border border-indigo-400/30 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Search className="w-4 h-4" />
+                <span>Portal Siswa & Alumni</span>
+              </button>
+            )}
             <button
               onClick={() => onNavigate('siswa')}
               className="px-4.5 py-2.5 bg-white text-slate-900 font-bold rounded-2xl text-xs hover:bg-slate-100 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
@@ -609,6 +621,21 @@ export default function MainDashboard({ students, teachers, staffList, settings,
               <p className="text-[10px] text-slate-400 mt-0.5">Siswa pindah & masuk</p>
             </div>
           </button>
+
+          {userRole === 'admin' && (
+            <button 
+              onClick={() => onNavigate('logs')}
+              className="p-4 bg-white hover:bg-emerald-50/50 border border-slate-100 hover:border-emerald-200 rounded-2xl shadow-3xs hover:shadow-md transition-all text-left flex flex-col justify-between h-28 group cursor-pointer"
+            >
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform border border-emerald-100">
+                <ShieldCheck className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <h5 className="font-bold text-slate-800 text-xs">Audit Trail & Log</h5>
+                <p className="text-[10px] text-slate-400 mt-0.5">Rekam jejak & keamanan</p>
+              </div>
+            </button>
+          )}
 
           {userRole === 'admin' && (
             <button 

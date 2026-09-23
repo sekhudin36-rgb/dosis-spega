@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Student } from '../types';
 import { DEFAULT_BOY_PHOTO, DEFAULT_GIRL_PHOTO } from '../data/mockStudents';
-import { X, Save, ArrowLeft, ArrowRight } from 'lucide-react';
+import { X, Save, ArrowLeft, ArrowRight, Camera, Upload, RotateCcw, Sparkles } from 'lucide-react';
+import { compressImage } from '../utils/imageCompression';
 
 interface StudentFormProps {
   student?: Student; // If provided, we are editing. If undefined, we are adding.
@@ -112,6 +113,31 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
 
   const [activeTab, setActiveTab] = useState<'pribadi' | 'pendidikan' | 'keluarga' | 'kegemaran'>('pribadi');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsCompressingPhoto(true);
+      // Auto compress photo to 3x4 student ratio, quality 0.8 (<50KB)
+      const compressed = await compressImage(file, 300, 400, 0.8);
+      setFormData(prev => ({ ...prev, foto: compressed }));
+    } catch (err) {
+      console.error('Photo compression error:', err);
+      alert('Gagal memproses foto. Silakan pilih file gambar (JPG/PNG).');
+    } finally {
+      setIsCompressingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
+
+  const handleResetPhoto = () => {
+    const defaultPhoto = formData.jenisKelamin === 'L' ? DEFAULT_BOY_PHOTO : DEFAULT_GIRL_PHOTO;
+    setFormData(prev => ({ ...prev, foto: defaultPhoto }));
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -149,9 +175,9 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-md overflow-hidden max-w-4xl mx-auto">
       {/* Form Header */}
-      <div className="bg-slate-50 border-b border-slate-100 px-6 py-5 flex items-center justify-between">
+      <div className="bg-slate-50 border-b border-slate-100 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-slate-800">
+          <h2 className="text-base sm:text-lg font-bold text-slate-800">
             {isEdit ? 'Ubah Data Buku Induk Siswa' : 'Tambah Data Buku Induk Baru'}
           </h2>
           <p className="text-slate-500 text-xs mt-0.5">
@@ -168,12 +194,12 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* Form Tab Toggles */}
-        <div className="flex flex-wrap border-b border-slate-100 px-6 bg-slate-50/20">
+        {/* Form Tab Toggles with smooth horizontal swipe */}
+        <div className="flex overflow-x-auto whitespace-nowrap scrollbar-none border-b border-slate-100 px-3 sm:px-6 bg-slate-50/20">
           <button
             type="button"
             onClick={() => setActiveTab('pribadi')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+            className={`shrink-0 py-3 px-3.5 sm:px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'pribadi' 
                 ? 'border-slate-800 text-slate-800' 
                 : 'border-transparent text-slate-400 hover:text-slate-700'
@@ -184,7 +210,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
           <button
             type="button"
             onClick={() => setActiveTab('pendidikan')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+            className={`shrink-0 py-3 px-3.5 sm:px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'pendidikan' 
                 ? 'border-slate-800 text-slate-800' 
                 : 'border-transparent text-slate-400 hover:text-slate-700'
@@ -195,7 +221,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
           <button
             type="button"
             onClick={() => setActiveTab('keluarga')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+            className={`shrink-0 py-3 px-3.5 sm:px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'keluarga' 
                 ? 'border-slate-800 text-slate-800' 
                 : 'border-transparent text-slate-400 hover:text-slate-700'
@@ -206,7 +232,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
           <button
             type="button"
             onClick={() => setActiveTab('kegemaran')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+            className={`shrink-0 py-3 px-3.5 sm:px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'kegemaran' 
                 ? 'border-slate-800 text-slate-800' 
                 : 'border-transparent text-slate-400 hover:text-slate-700'
@@ -217,16 +243,78 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
         </div>
 
         {errorMsg && (
-          <div className="mx-6 mt-6 p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-800 text-xs font-semibold">
+          <div className="mx-4 sm:mx-6 mt-4 sm:mt-6 p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-800 text-xs font-semibold">
             {errorMsg}
           </div>
         )}
 
         {/* Tab 1: Identitas Pribadi & Kesehatan */}
         {activeTab === 'pribadi' && (
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs">
+          <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs">
             <div className="md:col-span-2 border-b border-slate-100 pb-2 mb-2">
               <h3 className="font-bold text-slate-800 text-sm">A. Keterangan Tentang Diri Siswa</h3>
+            </div>
+
+            {/* Pas Foto Siswa (3x4) with Auto Compression */}
+            <div className="md:col-span-2 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex flex-col sm:flex-row items-center sm:items-start gap-4">
+              <div className="relative w-24 h-32 rounded-xl overflow-hidden border-2 border-indigo-100 bg-white shadow-xs shrink-0 flex items-center justify-center">
+                <img 
+                  src={formData.foto} 
+                  alt="Pas Foto Siswa" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+                {isCompressingPhoto && (
+                  <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-center text-white text-[10px] font-bold">
+                    <Sparkles className="w-5 h-5 animate-spin mb-1 text-indigo-300" />
+                    <span>Kompresi...</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-2 text-center sm:text-left">
+                <div className="space-y-0.5">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                    <span className="font-bold text-slate-800 text-xs">Pas Foto Resmi Siswa (Format 3x4)</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <Sparkles className="w-3 h-3" />
+                      <span>Kompresi Otomatis Aktif</span>
+                    </span>
+                  </div>
+                  <p className="text-slate-500 text-[11px] leading-relaxed">
+                    Foto dari kamera ponsel atau file scan akan otomatis diubah ke resolusi buku induk standar dan dikompresi hemat memori (&lt;50 KB) tanpa mengurangi ketajaman cetak.
+                  </p>
+                </div>
+
+                <input 
+                  type="file" 
+                  ref={photoInputRef} 
+                  onChange={handlePhotoUpload} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={isCompressingPhoto}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Pilih / Unggah Foto</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResetPhoto}
+                    className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Foto Default</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Nama Lengkap */}
@@ -578,7 +666,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
 
         {/* Tab 2: Riwayat Pendidikan */}
         {activeTab === 'pendidikan' && (
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs animate-fade-in">
+          <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs animate-fade-in">
             <div className="md:col-span-2 border-b border-slate-100 pb-2 mb-2">
               <h3 className="font-bold text-slate-800 text-sm">D. Keterangan Pendidikan</h3>
             </div>
@@ -651,7 +739,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
             </div>
 
             <div className="md:col-span-2 border-b border-slate-100 pb-2 mt-4 mb-2">
-              <h3 className="font-bold text-slate-800 text-sm">Diterima Di Sekolah Ini (UPTD SMPN 3 Kras)</h3>
+              <h3 className="font-bold text-slate-800 text-sm">Diterima Di Sekolah Ini (SMP NEGERI 3 KRAS)</h3>
             </div>
 
             {/* Diterima Tingkat & Kelompok */}
@@ -705,7 +793,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
 
         {/* Tab 3: Orang Tua & Wali */}
         {activeTab === 'keluarga' && (
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs animate-fade-in">
+          <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs animate-fade-in">
             <div className="md:col-span-2 border-b border-slate-100 pb-2 mb-2">
               <h3 className="font-bold text-slate-800 text-sm">E. Keterangan Tentang Ayah Kandung</h3>
             </div>
@@ -1047,7 +1135,7 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
 
         {/* Tab 4: Kegemaran & Status */}
         {activeTab === 'kegemaran' && (
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs animate-fade-in">
+          <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs animate-fade-in">
             <div className="md:col-span-2 border-b border-slate-100 pb-2 mb-2">
               <h3 className="font-bold text-slate-800 text-sm">H. Kegemaran Siswa</h3>
             </div>
@@ -1148,8 +1236,8 @@ export default function StudentForm({ student, onSave, onCancel }: StudentFormPr
         )}
 
         {/* Form Footer */}
-        <div className="bg-slate-50 border-t border-slate-100 px-6 py-4.5 flex items-center justify-between">
-          <div>
+        <div className="bg-slate-50 border-t border-slate-100 px-4 sm:px-6 py-3.5 sm:py-4.5 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
             {activeTab === 'pribadi' && (
               <button
                 type="button"

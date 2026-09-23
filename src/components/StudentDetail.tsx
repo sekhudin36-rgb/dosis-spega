@@ -25,9 +25,12 @@ import {
   AlertCircle,
   Clock,
   Briefcase,
-  Camera
+  Camera,
+  CreditCard,
+  FileText
 } from 'lucide-react';
-import { exportStudentMasterBookPDF, exportStudentReportPDF } from '../utils/pdfUtils';
+import { exportStudentMasterBookPDF, exportStudentReportPDF, exportStudentIdCardPDF } from '../utils/pdfUtils';
+
 
 interface StudentDetailProps {
   student: Student;
@@ -36,6 +39,7 @@ interface StudentDetailProps {
   onEdit: () => void;
   onUpdateStudent: (updated: Student) => void;
   onOpenGradeEditor: (semesterId: string) => void;
+  onGenerateLetter?: (studentId: string) => void;
 }
 
 export default function StudentDetail({
@@ -44,7 +48,8 @@ export default function StudentDetail({
   onBack,
   onEdit,
   onUpdateStudent,
-  onOpenGradeEditor
+  onOpenGradeEditor,
+  onGenerateLetter
 }: StudentDetailProps) {
   const [activeTab, setActiveTab] = useState<'pribadi' | 'pendidikan' | 'keluarga' | 'akademik'>('pribadi');
   const [expandedSemester, setExpandedSemester] = useState<string | null>("1");
@@ -77,26 +82,49 @@ export default function StudentDetail({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Back navigation & Edit actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <button 
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer bg-white px-3 py-2 rounded-xl border border-slate-100"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer bg-white px-3 py-2 rounded-xl border border-slate-100 w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Kembali ke Daftar</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Print Student ID Card (KTS) */}
+          <button 
+            onClick={() => exportStudentIdCardPDF(student)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-all border border-indigo-200/60 cursor-pointer shadow-xs"
+            title="Cetak Kartu Tanda Siswa (KTS) Ukuran Standar 2 Sisi"
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>Cetak Kartu Pelajar (KTS)</span>
+          </button>
+
           {/* Print Master Book PDF */}
           <button 
             onClick={() => exportStudentMasterBookPDF(student)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             <span>Cetak Buku Induk (PDF)</span>
           </button>
+
+          {/* Generate Official Letter */}
+          {onGenerateLetter && (
+            <button 
+              onClick={() => onGenerateLetter(student.id)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold transition-all border border-emerald-200/60 cursor-pointer shadow-xs"
+              title="Buat Surat Keterangan Siswa Aktif / Kelakuan Baik"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Cetak Surat Keterangan</span>
+            </button>
+          )}
+
 
           {/* Edit Student profile */}
           {userRole === 'admin' && (
@@ -204,11 +232,11 @@ export default function StudentDetail({
         <div className="lg:col-span-8 space-y-6">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
             
-            {/* Tabs Selector */}
-            <div className="flex flex-wrap border-b border-slate-100 bg-slate-50/50 p-2 gap-1">
+            {/* Tabs Selector with smooth mobile horizontal scroll */}
+            <div className="flex overflow-x-auto whitespace-nowrap border-b border-slate-100 bg-slate-50/50 p-2 gap-1.5 scrollbar-none">
               <button
                 onClick={() => setActiveTab('pribadi')}
-                className={`flex-1 min-w-[120px] py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'pribadi' 
                     ? 'bg-white text-slate-800 shadow-xs' 
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
@@ -218,7 +246,7 @@ export default function StudentDetail({
               </button>
               <button
                 onClick={() => setActiveTab('pendidikan')}
-                className={`flex-1 min-w-[120px] py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'pendidikan' 
                     ? 'bg-white text-slate-800 shadow-xs' 
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
@@ -228,7 +256,7 @@ export default function StudentDetail({
               </button>
               <button
                 onClick={() => setActiveTab('keluarga')}
-                className={`flex-1 min-w-[120px] py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'keluarga' 
                     ? 'bg-white text-slate-800 shadow-xs' 
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
@@ -238,7 +266,7 @@ export default function StudentDetail({
               </button>
               <button
                 onClick={() => setActiveTab('akademik')}
-                className={`flex-1 min-w-[120px] py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'akademik' 
                     ? 'bg-white text-slate-800 shadow-xs' 
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
@@ -250,7 +278,7 @@ export default function StudentDetail({
 
             {/* Tab 1: Identitas Pribadi Content */}
             {activeTab === 'pribadi' && (
-              <div className="p-6 space-y-6 animate-fade-in text-xs">
+              <div className="p-4 sm:p-6 space-y-6 animate-fade-in text-xs">
                 <div>
                   <h4 className="font-bold text-slate-700 uppercase tracking-wider mb-3 pb-1 border-b border-slate-100">
                     A. Keterangan Tentang Diri Siswa
@@ -370,7 +398,7 @@ export default function StudentDetail({
 
             {/* Tab 2: Riwayat Pendidikan */}
             {activeTab === 'pendidikan' && (
-              <div className="p-6 space-y-6 animate-fade-in text-xs">
+              <div className="p-4 sm:p-6 space-y-6 animate-fade-in text-xs">
                 <div>
                   <h4 className="font-bold text-slate-700 uppercase tracking-wider mb-3 pb-1 border-b border-slate-100">
                     D. Keterangan Pendidikan Sebelumnya
@@ -435,7 +463,7 @@ export default function StudentDetail({
 
             {/* Tab 3: Keluarga Content */}
             {activeTab === 'keluarga' && (
-              <div className="p-6 space-y-6 animate-fade-in text-xs">
+              <div className="p-4 sm:p-6 space-y-6 animate-fade-in text-xs">
                 <div>
                   <h4 className="font-bold text-slate-700 uppercase tracking-wider mb-3 pb-1 border-b border-slate-100">
                     E. Keterangan Tentang Ayah Kandung
@@ -590,7 +618,7 @@ export default function StudentDetail({
 
             {/* Tab 3: Riwayat Akademik Content */}
             {activeTab === 'akademik' && (
-              <div className="p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <h4 className="font-bold text-slate-800 text-sm">Transkrip Nilai Semester (1-6)</h4>
                   <div className="flex gap-2">

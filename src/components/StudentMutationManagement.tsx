@@ -4,8 +4,10 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Student } from '../types';
+import { Student, SchoolSettings, MutationApplication } from '../types';
 import { exportStudentMasterBookPDF } from '../utils/pdfUtils';
+import { defaultMutationApplications } from '../data/mockMutationApplications';
+import MutationApplicationManagement from './MutationApplicationManagement';
 import { 
   ArrowLeftRight, 
   UserPlus, 
@@ -24,27 +26,60 @@ import {
   ArrowRight,
   Eye,
   Printer,
-  RotateCcw
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 
 interface StudentMutationManagementProps {
   students: Student[];
   userRole?: 'admin' | 'guru';
+  settings?: SchoolSettings;
+  mutationApplications?: MutationApplication[];
+  onSaveMutationApplications?: (apps: MutationApplication[]) => void;
   onSaveStudent: (student: Student) => void;
   onDeleteStudent: (id: string) => void;
   onViewStudent?: (student: Student) => void;
   onEditStudent?: (student: Student) => void;
+  onAddActivityLog?: (action: any, desc: string) => void;
 }
 
 export default function StudentMutationManagement({
   students,
   userRole = 'admin',
+  settings,
+  mutationApplications,
+  onSaveMutationApplications,
   onSaveStudent,
   onDeleteStudent,
   onViewStudent,
-  onEditStudent
+  onEditStudent,
+  onAddActivityLog
 }: StudentMutationManagementProps) {
-  const [activeTab, setActiveTab] = useState<'masuk' | 'keluar'>('masuk');
+  const [activeTab, setActiveTab] = useState<'pengajuan' | 'masuk' | 'keluar'>('pengajuan');
+
+  // Internal mutation application state if not passed from parent
+  const [internalApps, setInternalApps] = useState<MutationApplication[]>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('buku_induk_mutation_applications') : null;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return defaultMutationApplications;
+  });
+
+  const currentApps = mutationApplications || internalApps;
+
+  const handleSaveApplications = (updated: MutationApplication[]) => {
+    if (onSaveMutationApplications) {
+      onSaveMutationApplications(updated);
+    } else {
+      setInternalApps(updated);
+      localStorage.setItem('buku_induk_mutation_applications', JSON.stringify(updated));
+    }
+  };
   
   // Search state
   const [searchTermMasuk, setSearchTermMasuk] = useState('');
@@ -245,21 +280,43 @@ export default function StudentMutationManagement({
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-200 gap-2">
+      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto">
+        <button
+          onClick={() => {
+            setActiveTab('pengajuan');
+            setShowAddMasukForm(false);
+            setShowProcessKeluarForm(false);
+          }}
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'pengajuan' 
+              ? 'border-indigo-600 text-indigo-600 font-extrabold' 
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Pengajuan Mutasi Siswa</span>
+          <span className="bg-indigo-50 text-indigo-700 font-mono text-[10px] px-1.5 py-0.5 rounded-full border border-indigo-200">
+            {currentApps.length}
+          </span>
+          {currentApps.some(a => a.statusPengajuan === 'MENUNGGU_VERIFIKASI') && (
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Ada pengajuan menunggu verifikasi" />
+          )}
+        </button>
+
         <button
           onClick={() => {
             setActiveTab('masuk');
             setShowAddMasukForm(false);
             setShowProcessKeluarForm(false);
           }}
-          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
             activeTab === 'masuk' 
               ? 'border-amber-500 text-amber-600 font-extrabold' 
               : 'border-transparent text-slate-400 hover:text-slate-600'
           }`}
         >
           <UserPlus className="w-4 h-4" />
-          <span>Mutasi Masuk (Pindahan Masuk)</span>
+          <span>Buku Induk Mutasi Masuk</span>
           <span className="bg-slate-100 text-slate-500 font-mono text-[10px] px-1.5 py-0.5 rounded-full border border-slate-200">
             {students.filter(s => s.isMutasiMasuk === true).length}
           </span>
@@ -271,19 +328,92 @@ export default function StudentMutationManagement({
             setShowAddMasukForm(false);
             setShowProcessKeluarForm(false);
           }}
-          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
             activeTab === 'keluar' 
-              ? 'border-amber-500 text-amber-600 font-extrabold' 
+              ? 'border-rose-500 text-rose-600 font-extrabold' 
               : 'border-transparent text-slate-400 hover:text-slate-600'
           }`}
         >
           <UserMinus className="w-4 h-4" />
-          <span>Mutasi Keluar (Pindah/Keluar Sekolah)</span>
+          <span>Buku Induk Mutasi Keluar</span>
           <span className="bg-slate-100 text-slate-500 font-mono text-[10px] px-1.5 py-0.5 rounded-full border border-slate-200">
             {students.filter(s => s.statusSiswa === 'Pindah' || s.statusSiswa === 'Keluar').length}
           </span>
         </button>
       </div>
+
+      {/* TAB 0: PENGAJUAN MUTASI SISWA (WORKFLOW & VERIFIKASI) */}
+      {activeTab === 'pengajuan' && (
+        <div className="animate-fade-in">
+          <MutationApplicationManagement
+            applications={currentApps}
+            onSaveApplications={handleSaveApplications}
+            activeStudents={activeStudents}
+            userRole={userRole}
+            settings={settings || {
+              namaSekolah: 'SMP NEGERI 3 KRAS',
+              npsn: '20511869',
+              alamat: 'Jalan Doko, Kecamatan Kras Kode Pos : 64172',
+              desaKelurahan: 'Doko',
+              kecamatan: 'Kras',
+              kabupatenKota: 'Kabupaten Kediri',
+              provinsi: 'Jawa Timur',
+              telepon: '0354-123456',
+              email: 'smpn3kras@gmail.com',
+              website: 'smpntigakras.blogspot.co.id',
+              kepalaSekolah: 'Dr. H. Ahmad Sunaryo, M.Pd.',
+              nipKepalaSekolah: '197005121995121002',
+              tahunAjaranAktif: '2025/2026'
+            }}
+            onExecuteOutgoingMutation={(student, keluarInfo) => {
+              const updatedStudent: Student = {
+                ...student,
+                statusSiswa: 'Pindah',
+                sekolahTujuan: keluarInfo.sekolahTujuan,
+                tanggalMutasiKeluar: keluarInfo.tanggalMutasiKeluar,
+                noSuratMutasiKeluar: keluarInfo.noSuratMutasiKeluar,
+                alasanMutasi: keluarInfo.alasanMutasi
+              };
+              onSaveStudent(updatedStudent);
+            }}
+            onExecuteIncomingMutation={(incomingStudent) => {
+              const studentToSave: Student = {
+                id: 'siswa-masuk-' + Date.now(),
+                nis: incomingStudent.nis || `${new Date().getFullYear()}${Math.floor(100 + Math.random() * 900)}`,
+                nisn: incomingStudent.nisn || '',
+                namaLengkap: incomingStudent.namaLengkap || '',
+                namaPanggilan: incomingStudent.namaPanggilan || '',
+                jenisKelamin: incomingStudent.jenisKelamin || 'L',
+                tempatLahir: incomingStudent.tempatLahir || 'Kediri',
+                tanggalLahir: incomingStudent.tanggalLahir || '2011-01-01',
+                agama: incomingStudent.agama || 'Islam',
+                kewarganegaraan: incomingStudent.kewarganegaraan || 'WNI',
+                alamat: incomingStudent.alamat || '',
+                telepon: incomingStudent.telepon || '',
+                email: incomingStudent.email || '',
+                kelasSaatIni: incomingStudent.kelasSaatIni || '7-A',
+                tahunMasuk: new Date().getFullYear().toString(),
+                namaAyah: incomingStudent.namaAyah || '',
+                pekerjaanAyah: incomingStudent.pekerjaanAyah || '',
+                namaIbu: incomingStudent.namaIbu || '',
+                pekerjaanIbu: incomingStudent.pekerjaanIbu || '',
+                teleponOrangTua: incomingStudent.teleponOrangTua || '',
+                alamatOrangTua: incomingStudent.alamatOrangTua || '',
+                sekolahAsal: incomingStudent.sekolahAsal || '',
+                tanggalMutasiMasuk: incomingStudent.tanggalMutasiMasuk || new Date().toISOString().split('T')[0],
+                noSuratMutasiMasuk: incomingStudent.noSuratMutasiMasuk || '',
+                isMutasiMasuk: true,
+                statusSiswa: 'Aktif',
+                foto: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" fill="${incomingStudent.jenisKelamin === 'L' ? '%23E0F2FE' : '%23FCE7F3'}"/><circle cx="50" cy="40" r="22" fill="${incomingStudent.jenisKelamin === 'L' ? '%230284C7' : '%23DB2777'}"/><path d="M15 88C15 72 30 60 50 60C70 60 85 72 85 88H15Z" fill="${incomingStudent.jenisKelamin === 'L' ? '%230369A1' : '%23BE185D'}"/></svg>`,
+                riwayatAkademik: {}
+              };
+              onSaveStudent(studentToSave);
+            }}
+            onAddActivityLog={onAddActivityLog}
+            triggerAlert={triggerAlert}
+          />
+        </div>
+      )}
 
       {/* TAB 1: MUTASI MASUK (INCOMING) */}
       {activeTab === 'masuk' && (

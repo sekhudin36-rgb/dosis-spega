@@ -18,7 +18,13 @@ import {
   GraduationCap,
   Save,
   Check,
-  RefreshCw
+  RefreshCw,
+  Building2,
+  CheckSquare,
+  Square,
+  AlertCircle,
+  Calendar,
+  Sparkles
 } from 'lucide-react';
 
 interface ClassPromotionManagementProps {
@@ -33,11 +39,21 @@ interface PromotionRowState {
   targetClass: string;
 }
 
+interface SchoolWideClassRule {
+  sourceClass: string;
+  count: number;
+  action: 'Naik Kelas' | 'Lulus';
+  targetClass: string;
+}
+
 export default function ClassPromotionManagement({
   students,
   userRole = 'admin',
   onPromoteStudents
 }: ClassPromotionManagementProps) {
+  // Top-level tab: 'per-kelas' | 'serentak-sekolah'
+  const [viewMode, setViewMode] = useState<'per-kelas' | 'serentak-sekolah'>('per-kelas');
+
   // 1. Get list of unique active classes
   const activeClasses = useMemo(() => {
     const classes = students
@@ -64,20 +80,8 @@ export default function ClassPromotionManagement({
   const [bulkAction, setBulkAction] = useState<'Naik Kelas' | 'Tinggal Kelas' | 'Lulus' | 'Pindah/Keluar'>('Naik Kelas');
   const [bulkTargetClass, setBulkTargetClass] = useState('');
 
-  // 2. Filter students in the selected class
-  const studentsInClass = useMemo(() => {
-    if (!selectedClass) return [];
-    return students.filter(s => s.kelasSaatIni === selectedClass && s.statusSiswa === 'Aktif');
-  }, [students, selectedClass]);
-
-  // Search filtered students
-  const filteredStudents = useMemo(() => {
-    return studentsInClass.filter(s => 
-      s.namaLengkap.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.nis.includes(searchTerm) ||
-      s.nisn.includes(searchTerm)
-    );
-  }, [studentsInClass, searchTerm]);
+  // Multi-select state for individual student checkboxes
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
 
   // Helper to suggest next class automatically (e.g. "7-A" -> "8-A", "VIII-B" -> "IX-B")
   const suggestNextClass = (currentClass: string): string => {
@@ -98,6 +102,80 @@ export default function ClassPromotionManagement({
 
     // Default return current
     return currentClass;
+  };
+
+  // School-wide class mapping rules state
+  const [schoolRules, setSchoolRules] = useState<SchoolWideClassRule[]>([]);
+  const [showSchoolWideConfirmModal, setShowSchoolWideConfirmModal] = useState(false);
+
+  // Initialize schoolRules whenever activeClasses or students change
+  React.useEffect(() => {
+    const initialRules: SchoolWideClassRule[] = activeClasses.map(cls => {
+      const count = students.filter(s => s.kelasSaatIni === cls && s.statusSiswa === 'Aktif').length;
+      const isGrade9 = cls.startsWith('9') || cls.startsWith('IX');
+      return {
+        sourceClass: cls,
+        count,
+        action: isGrade9 ? 'Lulus' : 'Naik Kelas',
+        targetClass: isGrade9 ? '' : suggestNextClass(cls)
+      };
+    });
+    setSchoolRules(initialRules);
+  }, [activeClasses, students]);
+
+  const updateSchoolRule = (sourceClass: string, updates: Partial<SchoolWideClassRule>) => {
+    setSchoolRules(prev => prev.map(r => r.sourceClass === sourceClass ? { ...r, ...updates } : r));
+  };
+
+  const handleResetSchoolRulesToDefault = () => {
+    const initialRules: SchoolWideClassRule[] = activeClasses.map(cls => {
+      const count = students.filter(s => s.kelasSaatIni === cls && s.statusSiswa === 'Aktif').length;
+      const isGrade9 = cls.startsWith('9') || cls.startsWith('IX');
+      return {
+        sourceClass: cls,
+        count,
+        action: isGrade9 ? 'Lulus' : 'Naik Kelas',
+        targetClass: isGrade9 ? '' : suggestNextClass(cls)
+      };
+    });
+    setSchoolRules(initialRules);
+  };
+
+  // 2. Filter students in the selected class
+  const studentsInClass = useMemo(() => {
+    if (!selectedClass) return [];
+    return students.filter(s => s.kelasSaatIni === selectedClass && s.statusSiswa === 'Aktif');
+  }, [students, selectedClass]);
+
+  // Search filtered students
+  const filteredStudents = useMemo(() => {
+    return studentsInClass.filter(s => 
+      s.namaLengkap.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.nis.includes(searchTerm) ||
+      s.nisn.includes(searchTerm)
+    );
+  }, [studentsInClass, searchTerm]);
+
+  // Clear selected students when class changes
+  React.useEffect(() => {
+    setSelectedStudentIds(new Set());
+  }, [selectedClass]);
+
+  const toggleSelectStudent = (id: string) => {
+    setSelectedStudentIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedStudentIds.size === filteredStudents.length && filteredStudents.length > 0) {
+      setSelectedStudentIds(new Set());
+    } else {
+      setSelectedStudentIds(new Set(filteredStudents.map(s => s.id)));
+    }
   };
 
   // State for rows (key is studentId)
@@ -201,13 +279,17 @@ export default function ClassPromotionManagement({
     });
   };
 
-  // Apply Bulk Action to all currently filtered rows
+  // Apply Bulk Action to either selected students or all filtered rows
   const handleApplyBulk = () => {
-    if (filteredStudents.length === 0) return;
+    const targetStudents = selectedStudentIds.size > 0
+      ? filteredStudents.filter(s => selectedStudentIds.has(s.id))
+      : filteredStudents;
+
+    if (targetStudents.length === 0) return;
     
     setRowStates(prev => {
       const updated = { ...prev };
-      filteredStudents.forEach(s => {
+      targetStudents.forEach(s => {
         let target = '';
         if (bulkAction === 'Naik Kelas') {
           target = bulkTargetClass || suggestNextClass(s.kelasSaatIni);
@@ -225,7 +307,41 @@ export default function ClassPromotionManagement({
     });
   };
 
-  // Perform actual promotion processing
+  // Perform school-wide collective promotion
+  const handleProcessSchoolWidePromotion = () => {
+    const ruleMap = new Map<string, SchoolWideClassRule>();
+    schoolRules.forEach(r => ruleMap.set(r.sourceClass, r));
+
+    let totalPromoted = 0;
+    let totalGraduated = 0;
+
+    const updatedStudentsList = students.map(originalStudent => {
+      if (originalStudent.statusSiswa !== 'Aktif') return originalStudent;
+      const rule = ruleMap.get(originalStudent.kelasSaatIni);
+      if (!rule) return originalStudent;
+
+      const updated = { ...originalStudent };
+      if (rule.action === 'Lulus') {
+        updated.statusSiswa = 'Lulus';
+        totalGraduated++;
+      } else if (rule.action === 'Naik Kelas') {
+        updated.kelasSaatIni = rule.targetClass || suggestNextClass(originalStudent.kelasSaatIni);
+        updated.statusSiswa = 'Aktif';
+        totalPromoted++;
+      }
+      return updated;
+    });
+
+    onPromoteStudents(updatedStudentsList);
+    setShowSchoolWideConfirmModal(false);
+    setSummaryText(`Transisi Serentak Seluruh Sekolah Berhasil! Sebanyak ${totalPromoted} siswa naik tingkat kelas dan ${totalGraduated} siswa lulus/alumni.`);
+    setIsSuccess(true);
+    setTimeout(() => {
+      setIsSuccess(false);
+    }, 6000);
+  };
+
+  // Perform per-class promotion processing
   const [isSuccess, setIsSuccess] = useState(false);
   const [summaryText, setSummaryText] = useState('');
 
@@ -276,13 +392,13 @@ export default function ClassPromotionManagement({
     setSummaryText(`Berhasil memproses kelas ${selectedClass}: ${naik} siswa Naik Kelas, ${tinggal} Tinggal Kelas, ${lulus} Lulus, dan ${pindah} Pindah/Keluar.`);
     setIsSuccess(true);
 
-    // Reset search & selected class after 4 seconds (or let user view)
+    // Reset search & selected class after 5 seconds (or let user view)
     setTimeout(() => {
       setIsSuccess(false);
     }, 5000);
   };
 
-  // Count summaries for preview
+  // Count summaries for preview in per-class
   const previewCounts = useMemo(() => {
     let naik = 0;
     let tinggal = 0;
@@ -301,10 +417,25 @@ export default function ClassPromotionManagement({
     return { naik, tinggal, lulus, pindah };
   }, [filteredStudents, rowStates]);
 
+  // Count summaries for school-wide
+  const schoolWideCounts = useMemo(() => {
+    let totalActive = 0;
+    let totalPromoting = 0;
+    let totalGraduating = 0;
+
+    schoolRules.forEach(rule => {
+      totalActive += rule.count;
+      if (rule.action === 'Naik Kelas') totalPromoting += rule.count;
+      else if (rule.action === 'Lulus') totalGraduating += rule.count;
+    });
+
+    return { totalActive, totalPromoting, totalGraduating };
+  }, [schoolRules]);
+
   return (
     <div className="space-y-6">
       
-      {/* Title block */}
+      {/* Title block with view mode switcher */}
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-xs shrink-0">
@@ -316,6 +447,36 @@ export default function ClassPromotionManagement({
               Proses kenaikan jenjang kelas secara kolektif untuk memelihara riwayat buku induk siswa secara akurat.
             </p>
           </div>
+        </div>
+
+        {/* View Mode Switcher */}
+        <div className="flex bg-slate-100 p-1 rounded-xl gap-1 shrink-0 self-start md:self-auto">
+          <button
+            type="button"
+            onClick={() => setViewMode('per-kelas')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              viewMode === 'per-kelas'
+                ? 'bg-white text-indigo-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Per Rombel</span>
+          </button>
+          {userRole === 'admin' && (
+            <button
+              type="button"
+              onClick={() => setViewMode('serentak-sekolah')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'serentak-sekolah'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Transisi Serentak Sekolah</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -330,7 +491,240 @@ export default function ClassPromotionManagement({
         </div>
       )}
 
-      {/* Main Layout Grid */}
+      {/* VIEW MODE 1: TRANSISI SERENTAK SELURUH SEKOLAH */}
+      {viewMode === 'serentak-sekolah' && (
+        <div className="space-y-6">
+          {/* Summary metrics banner */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Rombel Aktif</span>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-2xl font-black text-slate-800">{activeClasses.length}</span>
+                <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Layers className="w-4 h-4" /></span>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Siswa Aktif</span>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-2xl font-black text-slate-800">{schoolWideCounts.totalActive}</span>
+                <span className="p-2 bg-sky-50 text-sky-600 rounded-lg"><Users className="w-4 h-4" /></span>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Estimasi Naik Kelas</span>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-2xl font-black text-emerald-600">{schoolWideCounts.totalPromoting}</span>
+                <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><TrendingUp className="w-4 h-4" /></span>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Estimasi Kelulusan Alumni</span>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-2xl font-black text-purple-600">{schoolWideCounts.totalGraduating}</span>
+                <span className="p-2 bg-purple-50 text-purple-600 rounded-lg"><GraduationCap className="w-4 h-4" /></span>
+              </div>
+            </div>
+          </div>
+
+          {/* School-wide mapping panel */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-50/50">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Building2 className="w-4.5 h-4.5 text-indigo-600" />
+                  <span>Matriks Pemetaan Kenaikan Rombel Serentak</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Tinjau dan sesuaikan tujuan rombel untuk setiap jenjang kelas secara serentak sebelum mengeksekusi penutupan tahun ajaran.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResetSchoolRulesToDefault}
+                  className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                  title="Kembalikan pemetaan ke rekomendasi standar"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Reset Rekomendasi</span>
+                </button>
+
+                {userRole === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSchoolWideConfirmModal(true)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer hover:shadow-md"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Jalankan Transisi Serentak</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* School Rules Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/80 font-bold text-slate-700 border-b border-slate-100">
+                    <th className="p-4 w-12 text-center">No</th>
+                    <th className="p-4">Rombel Saat Ini</th>
+                    <th className="p-4 text-center">Jumlah Siswa</th>
+                    <th className="p-4">Tindakan Kolektif</th>
+                    <th className="p-4">Rombel Tujuan</th>
+                    <th className="p-4">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-600">
+                  {schoolRules.map((rule, idx) => (
+                    <tr key={rule.sourceClass} className="hover:bg-slate-50/40">
+                      <td className="p-4 text-center font-mono font-bold text-slate-400">{idx + 1}</td>
+                      <td className="p-4">
+                        <span className="font-bold text-slate-800 text-xs flex items-center gap-2">
+                          <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                          <span>Kelas {rule.sourceClass}</span>
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          {rule.count} Siswa
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        {userRole === 'admin' ? (
+                          <select
+                            value={rule.action}
+                            onChange={(e: any) => updateSchoolRule(rule.sourceClass, { 
+                              action: e.target.value,
+                              targetClass: e.target.value === 'Lulus' ? '' : rule.targetClass || suggestNextClass(rule.sourceClass)
+                            })}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border focus:outline-hidden ${
+                              rule.action === 'Naik Kelas'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-100'
+                                : 'bg-purple-50 text-purple-800 border-purple-100'
+                            }`}
+                          >
+                            <option value="Naik Kelas">Naik Kelas</option>
+                            <option value="Lulus">Lulus / Kelulusan Alumni</option>
+                          </select>
+                        ) : (
+                          <span className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border ${
+                            rule.action === 'Naik Kelas'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-100'
+                              : 'bg-purple-50 text-purple-800 border-purple-100'
+                          }`}>
+                            {rule.action}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {rule.action === 'Naik Kelas' ? (
+                          <div className="flex items-center gap-2">
+                            <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                            {userRole === 'admin' ? (
+                              <input
+                                type="text"
+                                value={rule.targetClass}
+                                onChange={(e) => updateSchoolRule(rule.sourceClass, { targetClass: e.target.value })}
+                                placeholder="Kelas tujuan"
+                                className="w-24 px-2.5 py-1 border border-slate-200 rounded-lg text-center font-bold text-indigo-700 bg-indigo-50/20"
+                              />
+                            ) : (
+                              <span className="font-bold text-indigo-700">{rule.targetClass}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] font-bold text-purple-700 flex items-center gap-1.5">
+                            <GraduationCap className="w-3.5 h-3.5 text-purple-500" />
+                            <span>Status Lulus (Alumni)</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 text-[11px] text-slate-400">
+                        {rule.action === 'Naik Kelas' ? (
+                          <span>Seluruh siswa akan dipindahkan ke rombel {rule.targetClass || '-'}</span>
+                        ) : (
+                          <span>Siswa akan diarsipkan sebagai alumni sekolah</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* School wide help note */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-start gap-3 text-slate-500 text-[11px]">
+              <AlertCircle className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+              <p>
+                <strong>Catatan Transisi Kolektif:</strong> Siswa yang memiliki kebutuhan khusus (seperti tinggal kelas perorangan atau mutasi keluar) dapat disesuaikan terlebih dahulu di tab <strong>"Per Rombel"</strong> sebelum atau sesudah menjalankan proses serentak ini.
+              </p>
+            </div>
+          </div>
+
+          {/* School-Wide Confirmation Modal */}
+          {showSchoolWideConfirmModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 animate-scale-up space-y-5">
+                <div className="flex items-center gap-3 text-amber-600">
+                  <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm">Konfirmasi Transisi Serentak Seluruh Sekolah</h3>
+                    <p className="text-[11px] text-slate-500">Periksa ringkasan sebelum mengeksekusi kenaikan kelas massal.</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs space-y-2">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Total Rombel Diproses:</span>
+                    <span className="font-bold text-slate-800">{activeClasses.length} Rombel</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Siswa Naik Tingkat:</span>
+                    <span className="font-bold text-emerald-600">{schoolWideCounts.totalPromoting} Siswa</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Siswa Lulus (Alumni):</span>
+                    <span className="font-bold text-purple-600">{schoolWideCounts.totalGraduating} Siswa</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200 flex justify-between font-bold text-slate-800">
+                    <span>Total Siswa Terpengaruh:</span>
+                    <span>{schoolWideCounts.totalActive} Siswa</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Tindakan ini akan langsung memperbarui kelas siswa aktif dan status kelulusan di Buku Induk. Data riwayat akademik sebelumnya akan tetap tersimpan secara aman.
+                </p>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowSchoolWideConfirmModal(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleProcessSchoolWidePromotion}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Ya, Jalankan Transisi Sekarang</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW MODE 2: PER-KELAS / PER-ROMBEL (Original detailed view with multi-select) */}
+      {viewMode === 'per-kelas' && (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Left column: Sidebar Filters */}
@@ -475,10 +869,20 @@ export default function ClassPromotionManagement({
                     {/* Apply Button */}
                     <button
                       onClick={handleApplyBulk}
-                      className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                      className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
                     >
-                      Terapkan Ke Semua
+                      {selectedStudentIds.size > 0 
+                        ? `Terapkan (${selectedStudentIds.size} Terpilih)` 
+                        : 'Terapkan Ke Semua'}
                     </button>
+                    {selectedStudentIds.size > 0 && (
+                      <button
+                        onClick={() => setSelectedStudentIds(new Set())}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+                      >
+                        Batal Pilihan
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -497,7 +901,19 @@ export default function ClassPromotionManagement({
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50/80 font-bold text-slate-700 border-b border-slate-100">
-                      <th className="p-4 w-12 text-center">No</th>
+                      <th className="p-4 w-10 text-center">
+                        {userRole === 'admin' ? (
+                          <input
+                            type="checkbox"
+                            checked={filteredStudents.length > 0 && selectedStudentIds.size === filteredStudents.length}
+                            onChange={toggleSelectAll}
+                            className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                            title="Pilih Semua Siswa"
+                          />
+                        ) : (
+                          <span>No</span>
+                        )}
+                      </th>
                       <th className="p-4">Identitas Siswa</th>
                       <th className="p-4 text-center">Akademik</th>
                       <th className="p-4">Keputusan Kenaikan</th>
@@ -529,15 +945,27 @@ export default function ClassPromotionManagement({
                       }
 
                       return (
-                        <tr key={student.id} className="hover:bg-slate-50/20">
-                          <td className="p-4 text-center font-mono font-bold text-slate-400">{idx + 1}</td>
+                        <tr key={student.id} className={`hover:bg-slate-50/40 transition-colors ${selectedStudentIds.has(student.id) ? 'bg-indigo-50/25' : ''}`}>
+                          <td className="p-4 text-center">
+                            {userRole === 'admin' ? (
+                              <input
+                                type="checkbox"
+                                checked={selectedStudentIds.has(student.id)}
+                                onChange={() => toggleSelectStudent(student.id)}
+                                className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                              />
+                            ) : (
+                              <span className="font-mono font-bold text-slate-400">{idx + 1}</span>
+                            )}
+                          </td>
                           <td className="p-4">
                             <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-mono font-bold text-slate-400 w-4 text-right shrink-0">{idx + 1}.</span>
                               {/* Small thumb */}
                               <img 
                                 src={student.foto} 
                                 alt="" 
-                                className="w-8 h-8 rounded-lg object-cover bg-slate-100 shrink-0"
+                                className="w-8 h-8 rounded-lg object-cover bg-slate-100 shrink-0 border border-slate-200"
                                 referrerPolicy="no-referrer"
                               />
                               <div>
@@ -655,6 +1083,7 @@ export default function ClassPromotionManagement({
         </div>
 
       </div>
+      )}
 
     </div>
   );

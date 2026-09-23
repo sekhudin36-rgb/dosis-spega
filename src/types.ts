@@ -130,13 +130,31 @@ export interface Student {
   // Riwayat Mutasi (Optional)
   isMutasiMasuk?: boolean;
   sekolahAsal?: string;
+  npsnSekolahAsal?: string;
+  alamatSekolahAsal?: string;
   tanggalMutasiMasuk?: string;
   noSuratMutasiMasuk?: string;
+  kelasTujuanMasuk?: string;
 
   sekolahTujuan?: string;
+  npsnSekolahTujuan?: string;
+  alamatSekolahTujuan?: string;
   tanggalMutasiKeluar?: string;
   noSuratMutasiKeluar?: string;
   alasanMutasi?: string;
+  alasanKategoriMutasi?: string;
+  noRekomendasiDinas?: string;
+  bebasAdministrasi?: {
+    perpus?: boolean;
+    keuangan?: boolean;
+    kesiswaanBK?: boolean;
+    kurikulum?: boolean;
+  };
+
+  // Bantuan Siswa & Transportasi
+  penerimaKipPip?: boolean;
+  noKipPip?: string;
+  alatTransportasi?: string; // e.g. "Jalan Kaki", "Sepeda", "Sepeda Motor", "Angkutan Umum", "Antar Jemput"
 
   // Riwayat Kelulusan / Alumni (Optional)
   tanggalLulus?: string;
@@ -225,6 +243,11 @@ export interface SchoolSettings {
   nipKepalaSekolah: string;
   tahunAjaranAktif: string;
   temaAplikasi?: 'gelap' | 'terang' | 'biru' | 'indigo' | 'hijau';
+  kopDinasAtas?: string; // e.g. "PEMERINTAH KABUPATEN KEDIRI\nDINAS PENDIDIKAN"
+  logoSekolah?: string; // Base64 or image URL
+  stempelSekolah?: string; // Base64 or image URL
+  tandaTanganKepalaSekolah?: string; // Base64 or image URL
+  gunakanStempelPadaCetak?: boolean;
 }
 
 export interface UserAccount {
@@ -233,5 +256,125 @@ export interface UserAccount {
   password?: string; // Stored securely in real apps, plain here for simplicity per request
   role: 'admin' | 'guru';
 }
+
+export interface ActivityLog {
+  id: string;
+  timestamp: string;
+  userId: string;
+  username: string;
+  userRole: string;
+  action: 'TAMBAH_SISWA' | 'EDIT_SISWA' | 'HAPUS_SISWA' | 'NILAI_RAPOR' | 'KENAIKAN_KELAS' | 'MUTASI_SISWA' | 'PENGATURAN' | 'CADANGAN_DATA' | 'ALUMNI_UPDATE' | 'AUTH_SESSION' | 'SYSTEM' | 'IMPOR_SISWA' | 'CETAK_SURAT';
+  description: string;
+  targetId?: string;
+  targetName?: string;
+}
+
+export interface MutationApplication {
+  id: string;
+  nomorRegistrasi: string; // e.g. "REG-MUT-202609-001"
+  jenisMutasi: 'MUTASI_MASUK' | 'MUTASI_KELUAR';
+  tanggalPengajuan: string; // YYYY-MM-DD
+  statusPengajuan: 'MENUNGGU_VERIFIKASI' | 'DIPROSES' | 'DISETUJUI' | 'DITOLAK';
+  
+  // Kategori & Jalur Mutasi Kedinasan
+  jalurMutasi?: 'DALAM_KABUPATEN' | 'ANTAR_KABUPATEN' | 'ANTAR_PROVINSI' | 'MADRASAH_KEMENAG' | 'SWASTA_KE_NEGERI' | 'LUAR_NEGERI';
+  kategoriAlasan?: 'TUGAS_ORANG_TUA' | 'PINDAH_DOMISILI' | 'PONDOK_PESANTREN' | 'JARAK_TRANSPORTASI' | 'KESEHATAN' | 'LAINNYA';
+  semesterMutasi?: 'Ganjil' | 'Genap';
+  tahunAjaranMutasi?: string; // e.g. "2025/2026"
+  tanggalEfektifMutasi?: string; // TMT Mutasi
+  kurikulumDitempuh?: 'Kurikulum Merdeka' | 'Kurikulum 2013';
+
+  // Identitas Pemohon (Orang Tua / Wali)
+  namaPemohon: string;
+  hubunganDenganSiswa: 'Orang Tua' | 'Wali' | 'Siswa Sendiri' | 'Lainnya';
+  pekerjaanPemohon?: string;
+  nikPemohon?: string;
+  kontakPemohon: string; // No HP / WhatsApp
+  emailPemohon?: string;
+  alamatPemohon: string;
+
+  // Data Siswa
+  studentId?: string; // Jika mutasi keluar dari data siswa aktif yang ada
+  namaSiswa: string;
+  nis?: string;
+  nisn: string;
+  nikSiswa?: string;
+  jenisKelamin: 'L' | 'P';
+  tempatLahir?: string;
+  tanggalLahir?: string;
+  agama?: string;
+  kelasAsal: string; // e.g. "7-A" atau "8"
+  kelasTujuan?: string; // e.g. "8-B"
+
+  // Sekolah Asal & Tujuan
+  sekolahAsal: string;
+  npsnSekolahAsal?: string;
+  alamatSekolahAsal?: string;
+  sekolahTujuan: string;
+  npsnSekolahTujuan?: string;
+  alamatSekolahTujuan?: string;
+  kabupatenKotaTujuan?: string;
+  provinsiTujuan?: string;
+  alasanMutasi: string;
+
+  // Berkas Persyaratan (Checklist Berkas Fisik / Digital)
+  berkas: {
+    suratPermohonanOrtu: boolean;
+    suratKeteranganPindahAsal?: boolean; // Wajib untuk mutasi masuk
+    suratRekomendasiDinas?: boolean;
+    fotokopiRapor: boolean;
+    fotokopiKkKtp: boolean;
+    suratBebasPinjamPerpus?: boolean; // Wajib untuk mutasi keluar
+    suratKelakuanBaik?: boolean;
+    suratKeteranganBersediaMenerima?: boolean;
+    aktaKelahiran?: boolean;
+    bukuRaporAsliDiserahkan?: boolean;
+    catatanBerkas?: string;
+  };
+
+  // Pos Bebas Administrasi Internal Sekolah (Clearance)
+  bebasAdministrasi?: {
+    perpustakaan: boolean;
+    catatanPerpus?: string;
+    keuanganKomite: boolean;
+    catatanKeuangan?: string;
+    kesiswaanBK: boolean;
+    catatanBK?: string;
+    kurikulum: boolean;
+    catatanKurikulum?: string;
+  };
+
+  // Status Sinkronisasi Dapodik Kemdikbud
+  statusDapodik?: {
+    terdaftarDapodik: boolean;
+    statusVervalPD: 'VALID_DUKCAPIL' | 'RESIDU' | 'BELUM_VERVAL';
+    tanggalSinkronisasi?: string;
+    noSuratTarikDapodik?: string;
+    catatanDapodik?: string;
+  };
+
+  // Informasi Verifikasi Tata Usaha
+  catatanVerifikasi?: string;
+  verifikator?: string; // Nama petugas TU yang memverifikasi
+  tanggalDiproses?: string;
+  noSuratResmi?: string; // Nomor Surat Pindah Resmi / Keterangan Diterima
+  noSuratRekomendasiDinas?: string;
+  namaKepalaSekolahPenandatangan?: string;
+  nipKepalaSekolahPenandatangan?: string;
+}
+
+export interface BackupDataEnvelope {
+  appVersion: string;
+  exportedAt: string;
+  schoolName: string;
+  checksum: string;
+  students: Student[];
+  teachers: Teacher[];
+  staff: Staff[];
+  settings: SchoolSettings;
+  logs?: ActivityLog[];
+  mutationApplications?: MutationApplication[];
+}
+
 
 

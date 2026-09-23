@@ -99,6 +99,7 @@ export default function StudentList({
 
   // Dropdown tracker
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [isMobileToolsOpen, setIsMobileToolsOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<{ success?: boolean; message?: string } | null>(null);
@@ -132,11 +133,11 @@ export default function StudentList({
   // Student Card Printer States
   const [isCardPrinterOpen, setIsCardPrinterOpen] = useState(false);
   const [cardPrinterStudents, setCardPrinterStudents] = useState<Student[]>([]);
-  const [cardSchoolName, setCardSchoolName] = useState('SMP NEGERI INDONESIA');
+  const [cardSchoolName, setCardSchoolName] = useState('SMP NEGERI 3 KRAS');
   const [cardColor, setCardColor] = useState<'blue' | 'indigo' | 'emerald' | 'crimson' | 'slate'>('indigo');
   const [cardPrintWithBack, setCardPrintWithBack] = useState(true);
-  const [cardHeadmasterName, setCardHeadmasterName] = useState('Drs. H. Mulyono, M.Pd.');
-  const [cardHeadmasterNip, setCardHeadmasterNip] = useState('19750812 200003 1 002');
+  const [cardHeadmasterName, setCardHeadmasterName] = useState('Dr. H. Ahmad Sunaryo, M.Pd.');
+  const [cardHeadmasterNip, setCardHeadmasterNip] = useState('197005121995121002');
   const [cardRules, setCardRules] = useState<string[]>([
     'Kartu ini wajib dibawa setiap hari sebagai kartu identitas resmi di sekolah.',
     'Kartu digunakan untuk presensi/absen scan barcode masuk dan pulang sekolah.',
@@ -584,21 +585,135 @@ export default function StudentList({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-6">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-3.5 sm:p-6">
       {/* Header Panel with search, tools, and actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5 sm:mb-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Daftar Buku Induk Siswa</h2>
-          <p className="text-slate-500 text-sm mt-1">Kelola data induk digital, cetak laporan akademik siswa, dan migrasi massal.</p>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-800">Daftar Buku Induk Siswa</h2>
+          <p className="text-slate-500 text-xs sm:text-sm mt-0.5 sm:mt-1">Kelola data induk digital, cetak laporan akademik siswa, dan migrasi massal.</p>
         </div>
         
-        {/* Buttons Action Group */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Mobile-only Action Bar (<sm) */}
+        <div className="sm:hidden flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            {userRole === 'admin' && (
+              <button 
+                onClick={onAddStudent}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs active:scale-98 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Siswa Baru</span>
+              </button>
+            )}
+            <button
+              onClick={() => setIsMobileToolsOpen(!isMobileToolsOpen)}
+              className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                isMobileToolsOpen 
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
+              <span>Alat & Berkas</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMobileToolsOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          {/* Collapsible Mobile Quick Actions Grid */}
+          {isMobileToolsOpen && (
+            <div className="bg-slate-50/90 p-3 rounded-xl border border-slate-200 grid grid-cols-2 gap-2 animate-fade-in text-left">
+              <button 
+                onClick={downloadExcelTemplate}
+                className="p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <Download className="w-4 h-4 text-slate-500 shrink-0" />
+                <span className="truncate">Unduh Template</span>
+              </button>
+
+              <button 
+                onClick={() => exportStudentsToExcel(filteredStudents)}
+                className="p-2.5 bg-white border border-sky-200 rounded-lg text-xs font-medium text-sky-800 hover:bg-sky-50 flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-sky-600 shrink-0" />
+                <span className="truncate">Ekspor Excel</span>
+              </button>
+
+              {userRole === 'admin' && (
+                <>
+                  <button 
+                    onClick={triggerImportClick}
+                    className="p-2.5 bg-white border border-emerald-200 rounded-lg text-xs font-medium text-emerald-800 hover:bg-emerald-50 flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="truncate">Impor Excel</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setIsEdosisModalOpen(true)}
+                    className="p-2.5 bg-white border border-indigo-200 rounded-lg text-xs font-medium text-indigo-800 hover:bg-indigo-50 flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="truncate">Impor EDOSIS</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setIsGradesModalOpen(true)}
+                    className="p-2.5 bg-white border border-purple-200 rounded-lg text-xs font-medium text-purple-800 hover:bg-purple-50 flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span className="truncate">Impor/Ekspor Nilai</span>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      setIsBulkRaporModalOpen(true);
+                      const validClasses = classes.filter(c => c !== 'Semua');
+                      setBulkClass(validClasses[0] || '');
+                      setBulkSemester('1');
+                    }}
+                    className="p-2.5 bg-white border border-pink-200 rounded-lg text-xs font-medium text-pink-800 hover:bg-pink-50 flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 text-pink-600 shrink-0" />
+                    <span className="truncate">Unggah Rapor</span>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      setIsBulkPhotoModalOpen(true);
+                      setBulkPhotoUploads([]);
+                    }}
+                    className="p-2.5 bg-white border border-amber-200 rounded-lg text-xs font-medium text-amber-800 hover:bg-amber-50 flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span className="truncate">Unggah Foto</span>
+                  </button>
+                </>
+              )}
+
+              <button 
+                onClick={() => {
+                  setCardPrinterStudents(students);
+                  setCardSelectedIds(students.map(s => s.id));
+                  setCardFilterClass('Semua');
+                  setCardSearchQuery('');
+                  setIsCardPrinterOpen(true);
+                }}
+                className="p-2.5 bg-white border border-indigo-200 rounded-lg text-xs font-medium text-indigo-800 hover:bg-indigo-50 flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <CreditCard className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="truncate">Cetak Kartu Siswa</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Buttons Action Group (sm:flex) */}
+        <div className="hidden sm:flex flex-wrap items-center gap-2">
           {/* Download Template Excel */}
           <button 
             onClick={downloadExcelTemplate}
             title="Download Template Pengisian Excel"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold transition-all border border-slate-200"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold transition-all border border-slate-200 cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>Unduh Template</span>
@@ -610,7 +725,7 @@ export default function StudentList({
               <button 
                 onClick={triggerImportClick}
                 title="Impor Data Siswa secara Massal dari Excel"
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-all border border-emerald-200"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-all border border-emerald-200 cursor-pointer"
               >
                 <Upload className="w-4 h-4" />
                 <span>Impor Excel</span>
@@ -641,7 +756,7 @@ export default function StudentList({
           <button 
             onClick={() => exportStudentsToExcel(filteredStudents)}
             title="Ekspor Seluruh Siswa ke File Excel"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-xl text-xs font-semibold transition-all border border-sky-200"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-xl text-xs font-semibold transition-all border border-sky-200 cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>Ekspor Excel</span>
@@ -738,61 +853,61 @@ export default function StudentList({
       )}
 
       {/* Filter and layout selection section */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pb-6 mb-6 border-b border-slate-100">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 pb-5 sm:pb-6 mb-5 sm:mb-6 border-b border-slate-100">
         {/* Search */}
         <div className="relative md:col-span-5">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input 
             type="text"
             placeholder="Cari nama siswa, NIS, atau NISN..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10.5 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-slate-400 outline-none transition-all placeholder:text-slate-400 text-slate-800"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-slate-400 outline-hidden transition-all placeholder:text-slate-400 text-slate-800"
           />
         </div>
 
-        {/* Filter Class */}
-        <div className="flex items-center gap-2 md:col-span-3">
-          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-          <select
-            value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none text-slate-700"
-          >
-            {classes.map((cls, idx) => (
-              <option key={idx} value={cls}>{cls === 'Semua' ? 'Semua Kelas' : `Kelas ${cls}`}</option>
-            ))}
-          </select>
-        </div>
+        {/* Filter Class & Filter Status (Side-by-side on mobile) */}
+        <div className="grid grid-cols-2 gap-2 md:col-span-6">
+          <div className="flex items-center gap-1.5">
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white outline-hidden text-slate-700"
+            >
+              {classes.map((cls, idx) => (
+                <option key={idx} value={cls}>{cls === 'Semua' ? 'Semua Kelas' : `Kelas ${cls}`}</option>
+              ))}
+            </select>
+          </div>
 
-        {/* Filter Status */}
-        <div className="flex items-center gap-2 md:col-span-3">
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none text-slate-700"
-          >
-            {statuses.map((st, idx) => (
-              <option key={idx} value={st}>{st === 'Semua' ? 'Semua Status' : `Status: ${st}`}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-1.5">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white outline-hidden text-slate-700"
+            >
+              {statuses.map((st, idx) => (
+                <option key={idx} value={st}>{st === 'Semua' ? 'Semua Status' : `Status: ${st}`}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Layout toggle buttons */}
         <div className="flex items-center justify-end gap-1.5 md:col-span-1">
           <button 
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-slate-100 text-slate-700' : 'text-slate-400 hover:bg-slate-50'}`}
-            title="Tampilan Grid"
+            className={`p-2 rounded-lg transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:bg-slate-50'}`}
+            title="Tampilan Kartu"
           >
-            <Grid className="w-4.5 h-4.5" />
+            <Grid className="w-4 h-4" />
           </button>
           <button 
             onClick={() => setViewMode('table')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-slate-100 text-slate-700' : 'text-slate-400 hover:bg-slate-50'}`}
+            className={`p-2 rounded-lg transition-all cursor-pointer ${viewMode === 'table' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:bg-slate-50'}`}
             title="Tampilan Tabel"
           >
-            <List className="w-4.5 h-4.5" />
+            <List className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -812,7 +927,7 @@ export default function StudentList({
 
       {/* Grid View */}
       {filteredStudents.length > 0 && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-6">
           {filteredStudents.map((student) => {
             const hasGrades = Object.keys(student.riwayatAkademik).length > 0;
             return (
@@ -824,7 +939,7 @@ export default function StudentList({
                 {/* Header background pattern */}
                 <div className="h-2 bg-gradient-to-r from-slate-100 to-slate-200 group-hover:from-slate-200 group-hover:to-slate-300 transition-all" />
                 
-                <div className="p-5 flex-1 flex flex-col">
+                <div className="p-4 sm:p-5 flex-1 flex flex-col">
                   <div className="flex items-start gap-4">
                     {/* Photo Container */}
                     <div className="relative w-16 h-20 rounded-xl overflow-hidden border border-slate-200 shadow-2xs bg-slate-50 shrink-0">
@@ -997,8 +1112,8 @@ export default function StudentList({
 
       {/* Table View */}
       {filteredStudents.length > 0 && viewMode === 'table' && (
-        <div className="overflow-x-auto rounded-xl border border-slate-100">
-          <table className="w-full border-collapse text-left text-sm text-slate-500">
+        <div className="overflow-x-auto rounded-xl border border-slate-100 scrollbar-thin">
+          <table className="w-full min-w-[700px] border-collapse text-left text-sm text-slate-500">
             <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
               <tr>
                 <th scope="col" className="px-6 py-4">Foto / Nama Siswa</th>

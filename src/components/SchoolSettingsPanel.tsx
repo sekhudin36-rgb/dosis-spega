@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { SchoolSettings, Student, Teacher, Staff } from '../types';
+import { SchoolSettings, Student, Teacher, Staff, MutationApplication } from '../types';
 import { 
   Building2, 
   MapPin, 
@@ -14,27 +14,39 @@ import {
   Award, 
   Calendar, 
   Save, 
-  RefreshCw,
-  CheckCircle2,
-  AlertTriangle,
-  Download,
-  Upload,
-  Database
+  RefreshCw, 
+  CheckCircle2, 
+  AlertTriangle, 
+  Download, 
+  Upload, 
+  Database,
+  Stamp,
+  Image,
+  FileText,
+  X,
+  UploadCloud,
+  Cloud,
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
+import { compressImage } from '../utils/imageCompression';
 
 interface SchoolSettingsPanelProps {
   settings: SchoolSettings;
   students: Student[];
   teachers: Teacher[];
   staffList: Staff[];
+  mutationApplications?: MutationApplication[];
   onSaveSettings: (settings: SchoolSettings) => void;
   onResetDatabase: () => void;
   onRestoreDatabase: (
     students: Student[],
     teachers: Teacher[],
     staff: Staff[],
-    settings: SchoolSettings
+    settings: SchoolSettings,
+    mutationApplications?: MutationApplication[]
   ) => void;
+  onOpenGoogleDrive?: () => void;
 }
 
 export default function SchoolSettingsPanel({ 
@@ -42,9 +54,11 @@ export default function SchoolSettingsPanel({
   students, 
   teachers, 
   staffList, 
+  mutationApplications,
   onSaveSettings, 
   onResetDatabase,
-  onRestoreDatabase 
+  onRestoreDatabase,
+  onOpenGoogleDrive 
 }: SchoolSettingsPanelProps) {
   const [formSettings, setFormSettings] = useState<SchoolSettings>({ ...settings });
   const [isSavedSuccessfully, setIsSavedSuccessfully] = useState(false);
@@ -54,11 +68,52 @@ export default function SchoolSettingsPanel({
   const [pendingRestore, setPendingRestore] = useState<{ students: Student[], teachers: Teacher[], staff: Staff[], settings: SchoolSettings } | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const stampInputRef = useRef<HTMLInputElement>(null);
+  const signatureInputRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (key: keyof SchoolSettings, value: string) => {
+  const handleChange = (key: keyof SchoolSettings, value: any) => {
     setFormSettings(prev => ({
       ...prev,
       [key]: value
+    }));
+  };
+
+  const handleImageUpload = async (
+    key: 'logoSekolah' | 'stempelSekolah' | 'tandaTanganKepalaSekolah',
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Auto compress logo/stamp/signature to max 500x500 PNG/JPEG with high clarity
+      const compressed = await compressImage(file, 500, 500, 0.85);
+      setFormSettings(prev => ({
+        ...prev,
+        [key]: compressed
+      }));
+    } catch (err) {
+      console.error('Error compressing image:', err);
+      // Fallback to FileReader
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        if (base64) {
+          setFormSettings(prev => ({
+            ...prev,
+            [key]: base64
+          }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = (key: 'logoSekolah' | 'stempelSekolah' | 'tandaTanganKepalaSekolah') => {
+    setFormSettings(prev => ({
+      ...prev,
+      [key]: ''
     }));
   };
 
@@ -91,7 +146,8 @@ export default function SchoolSettingsPanel({
           students,
           teachers,
           staff: staffList,
-          settings
+          settings,
+          mutationApplications: mutationApplications || []
         }
       };
       const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
@@ -146,7 +202,8 @@ export default function SchoolSettingsPanel({
       pendingRestore.students,
       pendingRestore.teachers,
       pendingRestore.staff,
-      pendingRestore.settings
+      pendingRestore.settings,
+      pendingRestore.mutationApplications
     );
     setBackupStatus({ type: 'success', message: 'Data berhasil dipulihkan (restore) sepenuhnya!' });
     setShowRestoreConfirm(false);
@@ -368,11 +425,191 @@ export default function SchoolSettingsPanel({
               </div>
             </div>
 
-            {/* Section 5: Tema Aplikasi */}
+            {/* Section 5: Kelengkapan Dokumen Cetak, Kop Dinas, Stempel & Tanda Tangan */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                <Stamp className="w-4 h-4 text-indigo-500" />
+                V. Kelengkapan Dokumen Cetak, Stempel & Tanda Tangan Digital
+              </h3>
+
+              {/* Kop Dinas Atas */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Kop Surat Dinas Bagian Atas</label>
+                <input 
+                  type="text"
+                  value={formSettings.kopDinasAtas || ''}
+                  onChange={(e) => handleChange('kopDinasAtas', e.target.value)}
+                  placeholder="PEMERINTAH KABUPATEN KEDIRI / DINAS PENDIDIKAN"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-hidden focus:border-slate-800 text-slate-800"
+                />
+                <span className="text-[10px] text-slate-400 block">Teks nama dinas / pemerintah daerah yang dicetak di atas nama sekolah pada Kop Surat.</span>
+              </div>
+
+              {/* Tri-column upload for Logo, Stamp, Signature */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+                
+                {/* 1. Logo Sekolah */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-center">
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Logo Sekolah</span>
+                  
+                  <div className="w-20 h-20 mx-auto bg-white border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden p-1 shadow-2xs relative group">
+                    {formSettings.logoSekolah ? (
+                      <>
+                        <img 
+                          src={formSettings.logoSekolah} 
+                          alt="Logo" 
+                          className="w-full h-full object-contain" 
+                          referrerPolicy="no-referrer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage('logoSekolah')}
+                          className="absolute inset-0 bg-black/60 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold cursor-pointer"
+                        >
+                          <X className="w-4 h-4 text-rose-300 mb-0.5" />
+                          Hapus
+                        </button>
+                      </>
+                    ) : (
+                      <div className="text-slate-300 flex flex-col items-center">
+                        <Image className="w-6 h-6 mb-1" />
+                        <span className="text-[8px]">Belum Ada</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <input 
+                    type="file"
+                    ref={logoInputRef}
+                    onChange={(e) => handleImageUpload('logoSekolah', e)}
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    className="w-full py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold transition-colors cursor-pointer"
+                  >
+                    Unggah Logo (PNG/JPG)
+                  </button>
+                </div>
+
+                {/* 2. Stempel Dinas Sekolah */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-center">
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Stempel Dinas Resmi</span>
+                  
+                  <div className="w-20 h-20 mx-auto bg-white border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden p-1 shadow-2xs relative group">
+                    {formSettings.stempelSekolah ? (
+                      <>
+                        <img 
+                          src={formSettings.stempelSekolah} 
+                          alt="Stempel" 
+                          className="w-full h-full object-contain mix-blend-multiply" 
+                          referrerPolicy="no-referrer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage('stempelSekolah')}
+                          className="absolute inset-0 bg-black/60 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold cursor-pointer"
+                        >
+                          <X className="w-4 h-4 text-rose-300 mb-0.5" />
+                          Hapus
+                        </button>
+                      </>
+                    ) : (
+                      <div className="text-slate-300 flex flex-col items-center">
+                        <Stamp className="w-6 h-6 mb-1" />
+                        <span className="text-[8px]">Belum Ada</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <input 
+                    type="file"
+                    ref={stampInputRef}
+                    onChange={(e) => handleImageUpload('stempelSekolah', e)}
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => stampInputRef.current?.click()}
+                    className="w-full py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold transition-colors cursor-pointer"
+                  >
+                    Unggah Stempel (PNG Transparan)
+                  </button>
+                </div>
+
+                {/* 3. Tanda Tangan Digital Kepala Sekolah */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-center">
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Ttd. Kepala Sekolah</span>
+                  
+                  <div className="w-20 h-20 mx-auto bg-white border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden p-1 shadow-2xs relative group">
+                    {formSettings.tandaTanganKepalaSekolah ? (
+                      <>
+                        <img 
+                          src={formSettings.tandaTanganKepalaSekolah} 
+                          alt="Tanda Tangan" 
+                          className="w-full h-full object-contain" 
+                          referrerPolicy="no-referrer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage('tandaTanganKepalaSekolah')}
+                          className="absolute inset-0 bg-black/60 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold cursor-pointer"
+                        >
+                          <X className="w-4 h-4 text-rose-300 mb-0.5" />
+                          Hapus
+                        </button>
+                      </>
+                    ) : (
+                      <div className="text-slate-300 flex flex-col items-center">
+                        <FileText className="w-6 h-6 mb-1" />
+                        <span className="text-[8px]">Belum Ada</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <input 
+                    type="file"
+                    ref={signatureInputRef}
+                    onChange={(e) => handleImageUpload('tandaTanganKepalaSekolah', e)}
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => signatureInputRef.current?.click()}
+                    className="w-full py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold transition-colors cursor-pointer"
+                  >
+                    Unggah Ttd (PNG Transparan)
+                  </button>
+                </div>
+
+              </div>
+
+              {/* Checkbox toggle */}
+              <label className="flex items-center gap-2.5 p-3 bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-100 rounded-xl cursor-pointer transition-colors">
+                <input 
+                  type="checkbox"
+                  checked={formSettings.gunakanStempelPadaCetak ?? true}
+                  onChange={(e) => handleChange('gunakanStempelPadaCetak', e.target.checked)}
+                  className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                />
+                <span className="text-xs font-semibold text-slate-700">
+                  Otomatis tampilkan Stempel Dinas & Tanda Tangan Digital pada dokumen cetak (Surat Keterangan, Kartu Pelajar, dan Lembar Buku Induk)
+                </span>
+              </label>
+            </div>
+
+            {/* Section 6: Tema Aplikasi */}
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-slate-400" />
-                V. Personalisasi Tema
+                VI. Personalisasi Tema
               </h3>
               
               <div className="space-y-2">
@@ -419,8 +656,39 @@ export default function SchoolSettingsPanel({
             </h3>
             
             <p className="text-xs text-slate-500 mt-3 leading-relaxed">
-              Semua data buku induk (Siswa, Guru, Tendik, dan Pengaturan) disimpan secara aman di <strong>LocalStorage</strong> browser Anda untuk operasi offline penuh dan kinerja sangat cepat.
+              Pangkalan data Buku Induk Siswa (Siswa, Guru, Tendik, dan Pengaturan) tersimpan secara lokal dan dapat disinkronkan secara aman ke <strong>Google Drive</strong> untuk akses multi-perangkat dan cadangan awan otomatis.
             </p>
+
+            {/* Google Drive Cloud Integration Banner */}
+            {onOpenGoogleDrive && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-indigo-50 via-slate-50 to-indigo-50 border border-indigo-200/80 rounded-xl flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Cloud className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-800">Sinkronisasi Google Drive Aktif</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span>Cloud Database</span>
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      Kelola sinkronisasi otomatis, akun Google terhubung, dan riwayat file cloud.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onOpenGoogleDrive}
+                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors shadow-xs cursor-pointer"
+                >
+                  <span>Buka Panel Drive</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* Backup & Restore Section */}
             <div className="mt-4 border border-slate-100 bg-slate-50 p-4 rounded-xl space-y-3">
